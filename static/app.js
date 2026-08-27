@@ -347,6 +347,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  const btnRefreshHistory = document.getElementById("btnRefreshHistory");
+  if (btnRefreshHistory) {
+    btnRefreshHistory.addEventListener("click", () => fetchSyncHistory());
+  }
+
+  fetchSyncHistory();
+
+  async function fetchSyncHistory() {
+    const tbody = document.getElementById("syncHistoryTableBody");
+    if (!tbody) return;
+
+    try {
+      const res = await fetch("/api/sync-history");
+      const history = await res.json();
+
+      if (!Array.isArray(history) || history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding: 16px; text-align: center; color: var(--text-muted);">Hali sinxronizatsiya tarixi mavjud emas.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = history.map(item => {
+        const statusBadge = item.status === "success" 
+          ? '<span class="badge badge-success">OK 🟢</span>' 
+          : '<span class="badge badge-danger">SKIPPED 🔴</span>';
+        
+        return `
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 8px 12px; font-weight: 500;">${item.timestamp || '-'}</td>
+            <td style="padding: 8px 12px; color: #38bdf8;">${item.target_date || '-'}</td>
+            <td style="padding: 8px 12px;">${item.mode === 'live' ? 'LIVE (Real)' : 'DRY-RUN'}</td>
+            <td style="padding: 8px 12px;">${item.total_pg_records || item.count || 0} ta</td>
+            <td style="padding: 8px 12px; color: #4ade80;">${item.inserted || 0} ta</td>
+            <td style="padding: 8px 12px; color: #facc15;">${item.duplicates_skipped || 0} ta</td>
+            <td style="padding: 8px 12px; color: #f87171;">${item.unmapped_count || item.skipped || 0} ta</td>
+            <td style="padding: 8px 12px;">${statusBadge}</td>
+          </tr>
+        `;
+      }).join("");
+
+    } catch (err) {
+      console.error("History fetch error:", err);
+    }
+  }
+
   async function uploadAndExecute(dryRun) {
     if (!selectedFile) {
       alert("Iltimos, avval CSV faylni yuklang!");
@@ -374,7 +418,16 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           appendLog("Muvaffaqiyatli joylandi: " + result.inserted + " ta | Dublikat o'tkazildi: " + result.duplicates_skipped + " ta", "success");
           fetchStatus();
+          fetchSyncHistory();
         }
+
+        if (result.missing_stations && result.missing_stations.length > 0) {
+          appendLog("⚠️ Topilmagan stansiyalar: " + result.missing_stations.join(", "), "warn");
+        }
+        if (result.missing_chargers && result.missing_chargers.length > 0) {
+          appendLog("⚠️ Topilmagan qurilmalar: " + result.missing_chargers.join(", "), "warn");
+        }
+
       } else {
         const errorMsg = result.message || result.detail || "Noma'lum xatolik";
         appendLog("Xatolik: " + errorMsg, "error");
@@ -385,17 +438,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function triggerDailySync() {
-    appendLog("Kunlik PostgreSQL sinxronizatsiyasi boshlandi (Dry-run)...", "info");
+    appendLog("Kunlik PostgreSQL sinxronizatsiyasi sinovdan o'tkazilmoqda (Dry-run)...", "info");
     try {
       const formData = new FormData();
       formData.append("dry_run", true);
 
-      const res = await fetch("/api/upload-csv", {
+      const res = await fetch("/api/daily-sync", {
         method: "POST",
         body: formData
       });
       const result = await res.json();
       appendLog("Daily Sync Sinov Natijasi: " + JSON.stringify(result), "success");
+      fetchSyncHistory();
     } catch (err) {
       appendLog("Daily sync xatoligi: " + err.message, "error");
     }

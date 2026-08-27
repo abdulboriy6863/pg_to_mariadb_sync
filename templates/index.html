@@ -111,6 +111,43 @@
 
     </section>
 
+    <!-- 02:00 AM Daily Auto-Sync & History Section -->
+    <section class="card" style="margin-top: 24px;">
+      <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 600;">⏰ Sahar 02:00 AM Avto-Sinxronizatsiya Jurnali</h2>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Har kuni sahar 02:00 da PostgreSQL dan faqat kechagi kun yozuvlari avtomatik ajratib olinadi.</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="badge badge-success">02:00 AM CRON ACTIVE 🟢</span>
+          <button id="btnRefreshHistory" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">🔄 Tarixni Yangilash</button>
+        </div>
+      </div>
+
+      <!-- Sync History Table -->
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+              <th style="padding: 8px 12px;">Vaqt</th>
+              <th style="padding: 8px 12px;">Maqsadli Sana</th>
+              <th style="padding: 8px 12px;">Rejim</th>
+              <th style="padding: 8px 12px;">PG Ma'lumotlar</th>
+              <th style="padding: 8px 12px;">Kiritildi</th>
+              <th style="padding: 8px 12px;">O'tkazildi (Takror)</th>
+              <th style="padding: 8px 12px;">Topilmadi (Skipped)</th>
+              <th style="padding: 8px 12px;">Holat</th>
+            </tr>
+          </thead>
+          <tbody id="syncHistoryTableBody">
+            <tr>
+              <td colspan="8" style="padding: 16px; text-align: center; color: var(--text-muted);">Sinxronizatsiya tarixi yuklanmoqda...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 
   <!-- Settings Modal -->
