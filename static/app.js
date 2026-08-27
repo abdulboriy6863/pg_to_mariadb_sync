@@ -317,10 +317,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const totalCnt = metrics.total_imported_count || 0;
 
         if (todayHistoryValue) {
-          todayHistoryValue.textContent = todayCnt.toLocaleString() + " ta";
+          todayHistoryValue.textContent = totalCnt.toLocaleString() + " ta";
         }
         if (todayHistorySub) {
-          todayHistorySub.textContent = "Bugun: " + todayCnt.toLocaleString() + " ta | Jami yuklangan: " + totalCnt.toLocaleString() + " ta";
+          todayHistorySub.textContent = "Bugun: " + todayCnt.toLocaleString() + " ta | Jami ko'chirilgan: " + totalCnt.toLocaleString() + " ta";
         }
       } else {
         mariadbBadge.className = "badge badge-danger";
