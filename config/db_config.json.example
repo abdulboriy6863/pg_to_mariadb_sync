@@ -1,0 +1,17 @@
+{
+  "mariadb": {
+    "host": "192.168.0.28",
+    "port": 3306,
+    "user": "blue_networks",
+    "password": "YOUR_MARIADB_PASSWORD",
+    "database": "blue_networks",
+    "connect_timeout": 5
+  },
+  "postgresql": {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "user": "postgres",
+    "password": "YOUR_POSTGRES_PASSWORD",
+    "database": "old_charging_db"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "target_table": "TCSP_CHARGE_HIST",
+  "column_mapping": {
+    "충전시작 일시": "begin",
+    "충전종료 일시": "end",
+    "충전량(kWh)": "power",
+    "충전금액(원)": "totalPrice",
+    "카드번호": "cardNo",
+    "시작SOC(%)": "startSoc",
+    "완료SOC(%)": "soc",
+    "결제종류": "roamingType",
+    "신용카드승인번호": "approvenum",
+    "차량번호": "carNo",
+    "회원이름": "userName"
+  },
+  "required_defaults": {
+    "modelId": 0,
+    "connectorId": 1,
+    "powerUnit": "kWh"
+  },
+  "lookup_fields": {
+    "station_name_column": "사업장",
+    "charger_name_column": "충전기명"
+  }
+}

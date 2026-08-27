@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PG to MariaDB Data Migration & Sync Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo-container">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>DataSync Pro</h1>
+        <p>PostgreSQL ➔ MariaDB Live Sync Manager</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btnOpenSettings" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;">⚙️ Sozlamalar</button>
+      <div class="server-badge">
+        <div class="pulse-dot"></div>
+        <span id="serverIpDisplay">Server IP: 192.168.0.25:5050</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- Live Dynamic Status Grid -->
+    <section class="status-grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">MariaDB Server Status</span>
+          <span id="mariadbBadge" class="badge badge-info">Checking...</span>
+        </div>
+        <div id="mariadbValue" class="card-value">192.168.0.28:3306</div>
+        <div id="mariadbSub" class="card-subtext">Stansiyalar va qurilmalar yuklanmoqda...</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">PostgreSQL (Manba Baza)</span>
+          <span id="postgresBadge" class="badge badge-info">Checking...</span>
+        </div>
+        <div id="postgresValue" class="card-value">127.0.0.1:5432</div>
+        <div id="postgresSub" class="card-subtext">PostgreSQL ulanishi tekshirilmoqda...</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">TCSP_CHARGE_HIST (Bugun Yuklanganlar)</span>
+          <span class="badge badge-success">LIVE</span>
+        </div>
+        <div id="todayHistoryValue" class="card-value">0 ta</div>
+        <div id="todayHistorySub" class="card-subtext">Bugun kiritilgan ko'chirishlar soni</div>
+      </div>
+    </section>
+
+    <!-- Main Working Area: Dropzone & Terminal -->
+    <section class="content-grid">
+      
+      <!-- CSV Upload Panel -->
+      <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">CSV Tarixiy Ma'lumotlarni Yuklash</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+            PostgreSQL dan olingan 충전이력 CSV faylingizni bu yerga tashlang yoki tanlang.
+          </p>
+
+          <div id="dropzone" class="dropzone">
+            <div class="dropzone-icon">📁</div>
+            <div>
+              <h3 style="font-size: 15px; font-weight: 600;">CSV faylni shu yerga tashlang</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">yoki kompyuterdan tanlash uchun bosing</p>
+            </div>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+          </div>
+
+          <!-- Selected File Card (hidden by default) -->
+          <div id="fileCardContainer" class="file-card" style="display: none;">
+            <div class="file-card-info">
+              <span class="file-icon">📄</span>
+              <div class="file-details">
+                <span id="fileCardName" class="file-name">filename.csv</span>
+                <span id="fileCardSize" class="file-size">0.0 KB</span>
+              </div>
+            </div>
+            <button id="btnClearFile" class="btn-remove-file" title="Faylni o'chirish">❌ O'chirish</button>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btnDryRun" class="btn btn-secondary">🔍 Dry-Run Sinov</button>
+          <button id="btnLiveImport" class="btn btn-primary">🚀 Bazaga Yuklash</button>
+        </div>
+      </div>
+
+      <!-- Live Terminal / Console Panel -->
+      <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+          <h2 style="font-size: 18px; font-weight: 600;">Real-vaqt Konsol Loglari</h2>
+          <button id="btnDailySync" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">🔄 Daily Sync Sinash</button>
+        </div>
+        <div id="logTerminal" class="terminal-window">
+          <div class="log-line log-info">[SYSTEM] Web Console ishga tushdi. Live ulanishlar tekshirilmoqda...</div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>⚙️ Ma'lumotlar Bazasi Sozlamalari</h2>
+        <button id="btnCloseModal" class="close-btn">&times;</button>
+      </div>
+      
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="tab-pg">🐘 PostgreSQL (Manba)</button>
+        <button class="tab-btn" data-tab="tab-mariadb">🐬 MariaDB (Nishon)</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- PostgreSQL Tab -->
+        <div id="tab-pg" class="tab-content active">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Host / IP Manzil</label>
+              <input type="text" id="pgHost" placeholder="127.0.0.1">
+            </div>
+            <div class="form-group">
+              <label>Port</label>
+              <input type="number" id="pgPort" placeholder="5432">
+            </div>
+            <div class="form-group">
+              <label>Baza Nomi (Database)</label>
+              <input type="text" id="pgDatabase" placeholder="old_charging_db">
+            </div>
+            <div class="form-group">
+              <label>Foydalanuvchi (User)</label>
+              <input type="text" id="pgUser" placeholder="postgres">
+            </div>
+            <div class="form-group full-width">
+              <label>Parol (Password)</label>
+              <input type="password" id="pgPassword" placeholder="Parolni kiriting">
+            </div>
+          </div>
+          <div class="test-result-box" id="pgTestResult"></div>
+          <button id="btnTestPg" class="btn btn-secondary mt-12">🔍 PostgreSQL Ulanishini Tekshirish</button>
+        </div>
+
+        <!-- MariaDB Tab -->
+        <div id="tab-mariadb" class="tab-content">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Host / IP Manzil</label>
+              <input type="text" id="mariaHost" placeholder="192.168.0.28">
+            </div>
+            <div class="form-group">
+              <label>Port</label>
+              <input type="number" id="mariaPort" placeholder="3306">
+            </div>
+            <div class="form-group">
+              <label>Baza Nomi (Database)</label>
+              <input type="text" id="mariaDatabase" placeholder="blue_networks">
+            </div>
+            <div class="form-group">
+              <label>Foydalanuvchi (User)</label>
+              <input type="text" id="mariaUser" placeholder="blue_networks">
+            </div>
+            <div class="form-group full-width">
+              <label>Parol (Password)</label>
+              <input type="password" id="mariaPassword" placeholder="Parolni kiriting">
+            </div>
+          </div>
+          <div class="test-result-box" id="mariaTestResult"></div>
+          <button id="btnTestMaria" class="btn btn-secondary mt-12">🔍 MariaDB Ulanishini Tekshirish</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnCancelSettings" class="btn btn-secondary">Bekor qilish</button>
+        <button id="btnSaveSettings" class="btn btn-primary">💾 Sozlamalarni Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
