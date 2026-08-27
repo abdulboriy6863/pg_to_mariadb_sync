@@ -1,6 +1,32 @@
+# Configuration and Sensitive Data
 config/db_config.json
+.env
+.env.*
+
+# Data & Data Dumps
+*.csv
+*.sql
+*.json.bak
+uploads/
+scratch/
+temp/
+
+# Logs & Outputs
+logs/
+*.log
+
+# Python Environments & Cache
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# OS & IDE Files
 .DS_Store
-logs/
+.idea/
+.vscode/
+*.swp
+

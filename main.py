@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--csv-import', action='store_true', help='Execute live CSV import into MariaDB')
     parser.add_argument('--daily-sync-dry-run', action='store_true', help='Test daily incremental sync logic')
     parser.add_argument('--test-db', action='store_true', help='Test connection to MariaDB server')
-    parser.add_argument('--csv-path', type=str, default='/Users/abdulboriy/Desktop/충전이력 from 2026-08-01 to 2026-08-20 (1) - Sheet1.csv', help='Path to CSV file')
+    parser.add_argument('--csv-path', type=str, default='charging_data.csv', help='Path to CSV file')
 
     args = parser.parse_args()
 
