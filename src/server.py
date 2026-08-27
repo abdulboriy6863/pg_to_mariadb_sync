@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 
+import logging
+from apscheduler.schedulers.background import BackgroundScheduler
 from src.db_client import MariaDBClient
 from src.pg_client import PostgreSQLClient
 from src.csv_importer import CSVImporter
@@ -19,9 +21,34 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 static_dir = os.path.join(BASE_DIR, "static")
 templates_dir = os.path.join(BASE_DIR, "templates")
 CONFIG_PATH = os.path.join(BASE_DIR, "config", "db_config.json")
+SYNC_HISTORY_PATH = os.path.join(BASE_DIR, "logs", "sync_history.json")
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
+
+# 02:00 AM Daily Auto-Sync Scheduler
+scheduler = BackgroundScheduler()
+
+def run_scheduled_02am_sync():
+    logging.info("⏰ Executing Automatic 02:00 AM Daily Sync (PostgreSQL ➔ MariaDB)...")
+    try:
+        syncer = DailySyncer()
+        res = syncer.sync_daily_data(dry_run=False)
+        logging.info(f"02:00 AM Daily Sync Completed: {res}")
+    except Exception as e:
+        logging.error(f"02:00 AM Daily Sync Error: {e}")
+
+@app.on_event("startup")
+def start_scheduler():
+    scheduler.add_job(run_scheduled_02am_sync, trigger="cron", hour=2, minute=0, id="daily_sync_job", replace_existing=True)
+    scheduler.start()
+    logging.info("✅ 02:00 AM Daily Auto-Sync Scheduler started successfully.")
+
+@app.on_event("shutdown")
+def stop_scheduler():
+    if scheduler.running:
+        scheduler.shutdown()
+        logging.info("🛑 Daily Auto-Sync Scheduler stopped.")
 
 @app.get("/", response_class=HTMLResponse)
 def serve_index(request: Request):
@@ -163,3 +190,14 @@ def trigger_daily_sync(dry_run: bool = Form(True)):
     syncer = DailySyncer()
     result = syncer.sync_daily_data(dry_run=dry_run)
     return JSONResponse(content=result)
+
+@app.get("/api/sync-history")
+def get_sync_history():
+    if os.path.exists(SYNC_HISTORY_PATH):
+        try:
+            with open(SYNC_HISTORY_PATH, "r", encoding="utf-8") as f:
+                history = json.load(f)
+            return history
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    return []

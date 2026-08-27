@@ -45,6 +45,8 @@ class CSVImporter:
         transformed_records = []
         missing_cs_count = 0
         missing_cp_count = 0
+        missing_stations = set()
+        missing_chargers = set()
 
         def _parse_dt(val):
             if not val:
@@ -77,11 +79,15 @@ class CSVImporter:
                 cs_id = self.lookup_service.get_cs_id(station_name)
                 if not cs_id:
                     missing_cs_count += 1
+                    if station_name:
+                        missing_stations.add(station_name.strip())
                     continue
 
                 cp_id = self.lookup_service.get_cp_id(cs_id, charger_name)
                 if not cp_id:
                     missing_cp_count += 1
+                    if charger_name:
+                        missing_chargers.add(f"{station_name} -> {charger_name}".strip())
                     continue
 
                 begin_str = row.get("충전시작 일시") or row.get("충전시작 시간")
@@ -141,6 +147,8 @@ class CSVImporter:
                 "total_rows": len(transformed_records) + missing_cs_count + missing_cp_count,
                 "mapped_records": len(transformed_records),
                 "skipped_records": missing_cs_count + missing_cp_count,
+                "missing_stations": list(missing_stations)[:15],
+                "missing_chargers": list(missing_chargers)[:15],
                 "sample": transformed_records[0] if transformed_records else None
             }
         else:
@@ -149,5 +157,8 @@ class CSVImporter:
             return {
                 "status": "success",
                 "inserted": inserted,
-                "duplicates_skipped": duplicates
+                "duplicates_skipped": duplicates,
+                "skipped_records": missing_cs_count + missing_cp_count,
+                "missing_stations": list(missing_stations)[:15],
+                "missing_chargers": list(missing_chargers)[:15]
             }

@@ -21,12 +21,28 @@ class DailySyncer:
         self.mariadb_client = MariaDBClient(db_config_path)
         self.pg_client = PostgreSQLClient(db_config_path)
         self.lookup_service = LookupService(self.mariadb_client)
+        self.history_log_path = os.path.join(os.path.dirname(__file__), "..", "logs", "sync_history.json")
+
+    def _save_history_entry(self, entry):
+        try:
+            os.makedirs(os.path.dirname(self.history_log_path), exist_ok=True)
+            history = []
+            if os.path.exists(self.history_log_path):
+                with open(self.history_log_path, "r", encoding="utf-8") as f:
+                    history = json.load(f)
+            history.insert(0, entry) # newest first
+            history = history[:100] # keep last 100 entries
+            with open(self.history_log_path, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Error saving sync history log: {e}")
 
     def sync_daily_data(self, target_date=None, dry_run=True):
-        """Fetches daily data from PostgreSQL and syncs to MariaDB."""
+        """Fetches daily data from PostgreSQL (for exactly 1 target date, default yesterday) and syncs to MariaDB."""
         if target_date is None:
             target_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
+        start_time = datetime.now()
         logger.info(f"Initiating Daily Sync for Date: {target_date} (dry_run={dry_run})")
         
         pg_records = []
@@ -51,28 +67,48 @@ class DailySyncer:
                 conn.close()
         else:
             logger.warning("PostgreSQL connection unavailable. Daily sync cannot proceed without PG connection.")
-            return {
+            result = {
                 "status": "skipped",
+                "target_date": target_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "message": "PostgreSQL connection offline. Please check DB credentials.",
                 "count": 0
             }
+            if not dry_run:
+                self._save_history_entry(result)
+            return result
 
         if not pg_records:
             logger.info(f"No records found in PostgreSQL for {target_date}.")
-            return {"status": "success", "count": 0, "message": f"No records found for {target_date}"}
+            result = {
+                "status": "success",
+                "target_date": target_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "count": 0,
+                "message": f"No records found in PG for date {target_date}"
+            }
+            if not dry_run:
+                self._save_history_entry(result)
+            return result
 
         transformed = []
-        skipped = 0
+        missing_stations = set()
+        missing_chargers = set()
 
         for r in pg_records:
-            cs_id = self.lookup_service.get_cs_id(r.get("station_name"))
+            st_name = r.get("station_name")
+            cp_name = r.get("charger_name")
+
+            cs_id = self.lookup_service.get_cs_id(st_name)
             if not cs_id:
-                skipped += 1
+                if st_name:
+                    missing_stations.add(st_name)
                 continue
 
-            cp_id = self.lookup_service.get_cp_id(cs_id, r.get("charger_name"))
+            cp_id = self.lookup_service.get_cp_id(cs_id, cp_name)
             if not cp_id:
-                skipped += 1
+                if cp_name:
+                    missing_chargers.add(f"{st_name} -> {cp_name}")
                 continue
 
             begin_str = str(r.get("begin_time", f"{target_date} 00:00:00"))
@@ -99,13 +135,35 @@ class DailySyncer:
                 "soc": 0
             })
 
-        logger.info(f"Transformed {len(transformed)} records for {target_date}. Skipped: {skipped}")
+        unmapped_count = len(pg_records) - len(transformed)
+        logger.info(f"Transformed {len(transformed)} / {len(pg_records)} records for {target_date}. Unmapped: {unmapped_count}")
 
         if dry_run:
             logger.info("=== DRY RUN DAILY SYNC RESULT ===")
-            if transformed:
-                logger.info(json.dumps(transformed[0], ensure_ascii=False, indent=2))
-            return {"status": "success", "count": len(transformed), "skipped": skipped}
+            return {
+                "status": "success",
+                "mode": "dry_run",
+                "target_date": target_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_pg_records": len(pg_records),
+                "transformed_count": len(transformed),
+                "unmapped_count": unmapped_count,
+                "missing_stations": list(missing_stations)[:10],
+                "missing_chargers": list(missing_chargers)[:10]
+            }
         else:
             inserted, dupes = self.mariadb_client.insert_batch_charge_history(transformed)
-            return {"status": "success", "inserted": inserted, "duplicates": dupes, "skipped": skipped}
+            res = {
+                "status": "success",
+                "mode": "live",
+                "target_date": target_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_pg_records": len(pg_records),
+                "inserted": inserted,
+                "duplicates_skipped": dupes,
+                "unmapped_count": unmapped_count,
+                "missing_stations": list(missing_stations)[:10],
+                "missing_chargers": list(missing_chargers)[:10]
+            }
+            self._save_history_entry(res)
+            return res

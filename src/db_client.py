@@ -123,8 +123,8 @@ class MariaDBClient:
         finally:
             conn.close()
 
-    def insert_batch_charge_history(self, records):
-        """Batch insert records into TCSP_CHARGE_HIST using INSERT IGNORE."""
+    def insert_batch_charge_history(self, records, chunk_size=2000):
+        """Batch insert records into TCSP_CHARGE_HIST using INSERT IGNORE with chunking."""
         if not records:
             return 0, 0
 
@@ -140,15 +140,20 @@ class MariaDBClient:
         sql = f"INSERT IGNORE INTO TCSP_CHARGE_HIST ({col_names}) VALUES ({placeholders})"
         values_list = [[r[col] for col in columns] for r in records]
 
+        total_inserted = 0
         try:
             with conn.cursor() as cursor:
-                inserted_count = cursor.executemany(sql, values_list)
-                conn.commit()
-                logger.info(f"Successfully inserted {inserted_count} out of {len(records)} records into TCSP_CHARGE_HIST.")
-                return inserted_count, len(records) - inserted_count
+                for i in range(0, len(values_list), chunk_size):
+                    chunk = values_list[i:i + chunk_size]
+                    inserted_chunk = cursor.executemany(sql, chunk)
+                    conn.commit()
+                    total_inserted += inserted_chunk
+                
+                logger.info(f"Successfully inserted {total_inserted} out of {len(records)} records into TCSP_CHARGE_HIST.")
+                return total_inserted, len(records) - total_inserted
         except Exception as e:
             logger.error(f"Batch insert error: {e}")
             conn.rollback()
-            return 0, len(records)
+            return total_inserted, len(records) - total_inserted
         finally:
             conn.close()
