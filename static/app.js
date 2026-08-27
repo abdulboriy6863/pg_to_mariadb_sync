@@ -313,11 +313,14 @@ document.addEventListener("DOMContentLoaded", () => {
         mariadbSub.textContent = "Stansiyalar: " + data.mariadb.mapped_stations + " | Qurilmalar: " + data.mariadb.mapped_chargers;
 
         const metrics = data.mariadb.metrics || {};
+        const todayCnt = metrics.today_history_count || 0;
+        const totalCnt = metrics.total_imported_count || 0;
+
         if (todayHistoryValue) {
-          todayHistoryValue.textContent = (metrics.today_history_count || 0).toLocaleString() + " ta";
+          todayHistoryValue.textContent = todayCnt.toLocaleString() + " ta";
         }
         if (todayHistorySub) {
-          todayHistorySub.textContent = "Bugun kiritilgan ko'chirishlar soni";
+          todayHistorySub.textContent = "Bugun: " + todayCnt.toLocaleString() + " ta | Jami yuklangan: " + totalCnt.toLocaleString() + " ta";
         }
       } else {
         mariadbBadge.className = "badge badge-danger";

@@ -97,21 +97,28 @@ class MariaDBClient:
         conn = self.get_connection()
         if not conn:
             return {
-                "today_history_count": 0
+                "today_history_count": 0,
+                "total_imported_count": 0
             }
         try:
             with conn.cursor() as cursor:
-                # Fast indexed range query for tool-imported records (negative transactionId)
+                # Total tool-imported records (negative transactionId)
                 cursor.execute("SELECT COUNT(*) as cnt FROM TCSP_CHARGE_HIST WHERE transactionId < 0;")
-                imported_cnt = cursor.fetchone()['cnt']
+                total_imported_cnt = cursor.fetchone()['cnt']
+
+                # Today's tool-imported records
+                cursor.execute("SELECT COUNT(*) as cnt FROM TCSP_CHARGE_HIST WHERE transactionId < 0 AND DATE(begin) = CURDATE();")
+                today_cnt = cursor.fetchone()['cnt']
 
                 return {
-                    "today_history_count": imported_cnt
+                    "today_history_count": today_cnt,
+                    "total_imported_count": total_imported_cnt
                 }
         except Exception as e:
             logger.error(f"Error fetching live metrics: {e}")
             return {
-                "today_history_count": 0
+                "today_history_count": 0,
+                "total_imported_count": 0
             }
         finally:
             conn.close()

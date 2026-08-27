@@ -50,7 +50,12 @@ class CSVImporter:
             if not val:
                 return datetime.now()
             val_str = str(val).strip()
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%m/%d/%Y %H:%M:%S", "%Y-%m-%d", "%m/%d/%Y", "%Y/%m/%d %H:%M:%S"):
+            formats = (
+                "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M",
+                "%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y.%m.%d %H:%M:%S", "%Y.%m.%d %H:%M",
+                "%Y-%m-%d", "%m/%d/%Y", "%Y/%m/%d", "%Y.%m.%d"
+            )
+            for fmt in formats:
                 try:
                     return datetime.strptime(val_str, fmt)
                 except ValueError:

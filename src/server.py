@@ -99,18 +99,14 @@ def get_status():
     stations_count = 0
     chargers_count = 0
     metrics = {
-        "today_history_count": 0
+        "today_history_count": 0,
+        "total_imported_count": 0
     }
     
     if mariadb_online:
         try:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) as cnt FROM TINF_CS;")
-                stations_count = cursor.fetchone()['cnt']
-                cursor.execute("SELECT COUNT(*) as cnt FROM TINF_CP;")
-                chargers_count = cursor.fetchone()['cnt']
-                cursor.execute("SELECT COUNT(*) as cnt FROM TCSP_CHARGE_HIST WHERE transactionId < 0;")
-                metrics["today_history_count"] = cursor.fetchone()['cnt']
+            stations_count, chargers_count = db_client.get_mapped_counts()
+            metrics = db_client.get_live_metrics()
         except Exception:
             pass
         finally:
