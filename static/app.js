@@ -925,7 +925,8 @@ document.addEventListener("DOMContentLoaded", () => {
         b.style.background = "rgba(59, 130, 246, 0.15)";
         b.style.color = "#60a5fa";
         b.style.border = "1px solid rgba(59, 130, 246, 0.3)";
-        b.innerHTML = "⏳ Pre-flight schema validation bajarilmoqda...";
+        b.style.padding = "6px 12px";
+        b.innerHTML = "⏳ Pre-flight validation...";
       }
     });
 
@@ -938,62 +939,40 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok && data.status === "success") {
         const m = data.mariadb;
         const p = data.postgres;
-        
-        let mHtml = `<div><strong>🐬 MariaDB Target Table (${m.table_name}):</strong> ${m.exists ? "✅ Mavjud" : "⚠️ Mavjud emas (avto-yaratiladi)"}</div>`;
-        mHtml += `<div><strong>📊 Target Columns:</strong> ${m.matched_cols_count}/${m.total_req_cols} ta ustunlar mos keldi</div>`;
-        if (m.missing_cols && m.missing_cols.length > 0) {
-          mHtml += `<div style="color: #f87171;">⚠️ Yetishmayotgan target ustunlar: ${m.missing_cols.join(", ")}</div>`;
-        }
+
+        let mHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${m.matched_cols_count || 0}/${m.total_req_cols || 8} ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.85;">${m.exists ? '✅ Mavjud' : '⚠️ Topilmadi'}</span></div>`;
+
+        let pHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${p.matched_cols_count || 0}/${p.total_req_cols || 8} ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.85;">${p.connected && p.table_ok ? '✅ Mavjud' : '⚠️ Offline'}</span></div>`;
 
         if (data.domain_mismatch && data.recommendations) {
           const recs = data.recommendations;
           let recBtnHtml = "";
           if (recs.rec_mariadb_table) {
-            recBtnHtml += `<button type="button" class="btn btn-secondary btn-sm" onclick="applyRecommendedTable('mariadb', '${recs.rec_mariadb_table}')" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 6px; cursor: pointer; font-weight: 600;">⚡ MariaDB jadvalini '${recs.rec_mariadb_table}' ga moslash</button> `;
+            recBtnHtml += `<button type="button" onclick="applyRecommendedTable('mariadb', '${recs.rec_mariadb_table}')" style="font-size: 10px; padding: 2px 6px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 4px; cursor: pointer;">⚡ Fix MariaDB</button>`;
           }
           if (recs.rec_pg_table) {
-            recBtnHtml += `<button type="button" class="btn btn-secondary btn-sm" onclick="applyRecommendedTable('postgres', '${recs.rec_pg_table}')" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 6px; cursor: pointer; font-weight: 600;">⚡ PG jadvalini '${recs.rec_pg_table}' ga moslash</button>`;
+            recBtnHtml += `<button type="button" onclick="applyRecommendedTable('postgres', '${recs.rec_pg_table}')" style="font-size: 10px; padding: 2px 6px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 4px; cursor: pointer;">⚡ Fix PG</button>`;
           }
-
-          const mismatchAlert = `<div style="margin-top: 6px; padding: 8px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; color: #fbbf24; font-size: 11px;">⚠️ <strong>Sohaviy Nomutanosiblik (Domain Mismatch)!</strong><br>PostgreSQL (${data.postgres?.table_name}) va MariaDB (${data.mariadb?.table_name}) jadvallari har xil sohalarga tegishli.<br>${recBtnHtml}</div>`;
-
-          mHtml += mismatchAlert;
-
-          appendLog(`⚠️ Sohaviy Nomutanosiblik! PG ('${data.postgres?.table_name}') va MariaDB ('${data.mariadb?.table_name}') jadvallari har xil sohalarga tegishli.`, "warn");
+          mHtml += `<div style="margin-top: 4px; font-size: 10px; display: flex; align-items: center; justify-content: space-between;"><span>⚠️ Domain mismatch!</span> ${recBtnHtml}</div>`;
         }
 
         if (mariaBox) {
           mariaBox.style.background = m.exists && !data.domain_mismatch ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
           mariaBox.style.color = m.exists && !data.domain_mismatch ? "#34d399" : "#fbbf24";
           mariaBox.style.border = m.exists && !data.domain_mismatch ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          mariaBox.style.padding = "6px 12px";
           mariaBox.innerHTML = mHtml;
-        }
-
-        let pgTable = document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || p.table_name || "charging_history";
-        let pHtml = `<div><strong>🐘 PostgreSQL Source Table (${pgTable}):</strong> ${p.connected && p.table_ok ? "✅ Mavjud" : (p.connected ? "⚠️ Jadval topilmadi" : "❌ Ulanmadi (" + (p.message || "Offline") + ")")}</div>`;
-        if (p.matched_cols_count !== undefined && p.total_req_cols !== undefined && p.table_ok) {
-          pHtml += `<div><strong>📊 Source Columns:</strong> ${p.matched_cols_count}/${p.total_req_cols} ta ustunlar mos keldi</div>`;
-        } else if (p.connected && !p.table_ok) {
-          pHtml += `<div style="color: #fbbf24; font-size: 11px; margin-top: 3px;">⚠️ '${pgTable}' jadvali PostgreSQL bazasida topilmadi.</div>`;
-          if (p.available_tables && p.available_tables.length > 0) {
-            const tableBadges = p.available_tables.slice(0, 8).map(t => `<span onclick="applyRecommendedTable('postgres', '${t}')" style="display: inline-block; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 7px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-right: 4px; margin-top: 4px;" title="Tanlash uchun bosing">🐘 ${t}</span>`).join(" ");
-            pHtml += `<div style="font-size: 11px; margin-top: 4px;">💡 <strong>Baza ichidagi real jadvallar (tanlash uchun bosing):</strong><br>${tableBadges}</div>`;
-          }
-        } else {
-          pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
-        }
-        if (p.missing_cols && p.missing_cols.length > 0 && p.table_ok) {
-          pHtml += `<div style="color: #f87171;">⚠️ Yetishmayotgan source ustunlar: ${p.missing_cols.join(", ")}</div>`;
         }
 
         if (pgBox) {
           pgBox.style.background = p.connected && p.table_ok && !data.domain_mismatch ? "rgba(56, 189, 248, 0.15)" : "rgba(245, 158, 11, 0.15)";
           pgBox.style.color = p.connected && p.table_ok && !data.domain_mismatch ? "#38bdf8" : "#fbbf24";
-          pgBox.style.border = p.connected && p.table_ok && !data.domain_mismatch ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          pgBox.style.border = p.connected && p.table_ok && !data.domain_mismatch ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(56, 189, 248, 0.3)";
+          pgBox.style.padding = "6px 12px";
           pgBox.innerHTML = pHtml;
         }
       } else {
-        const errHtml = "❌ Validation xatosi: " + (data.detail || "Noma'lum xatolik");
+        const errHtml = "❌ Validation error";
         if (mariaBox) mariaBox.innerHTML = errHtml;
         if (pgBox) pgBox.innerHTML = errHtml;
       }
@@ -1107,10 +1086,9 @@ document.addEventListener("DOMContentLoaded", () => {
           pgBox.style.background = matchedCount === 8 ? "rgba(56, 189, 248, 0.15)" : "rgba(245, 158, 11, 0.15)";
           pgBox.style.color = matchedCount === 8 ? "#38bdf8" : "#fbbf24";
           pgBox.style.border = matchedCount === 8 ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          pgBox.style.padding = "6px 12px";
 
-          const counterBadge = `<div style="margin-top: 4px; font-size: 11px; font-weight: 600;">📊 Quvvatlash maydonlari: ${matchedCount}/8 ta mos keldi ${missingCount > 0 ? `<span style="color: #f87171;">(⚠️ ${missingCount} ta maydon bu jadvalda topilmadi)</span>` : `<span style="color: #34d399;">(✅ Barcha 8 ta maydon to'liq mos keldi)</span>`}</div>`;
-
-          pgBox.innerHTML = `<div><strong>🐘 PostgreSQL (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div>${counterBadge}<div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+          pgBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${matchedCount}/8 ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ta ustun</span></div>`;
         }
 
         appendLog(`🐘 PostgreSQL (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1170,7 +1148,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const matchedCount = autoMatchMariaColumns(colNames);
-        const missingCount = 8 - matchedCount;
 
         const mariaBox = document.getElementById("schemaValidationResult");
         if (mariaBox) {
@@ -1178,10 +1155,9 @@ document.addEventListener("DOMContentLoaded", () => {
           mariaBox.style.background = matchedCount === 8 ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
           mariaBox.style.color = matchedCount === 8 ? "#34d399" : "#fbbf24";
           mariaBox.style.border = matchedCount === 8 ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(52, 211, 153, 0.3)";
+          mariaBox.style.padding = "6px 12px";
 
-          const counterBadge = `<div style="margin-top: 4px; font-size: 11px; font-weight: 600;">📊 Quvvatlash maydonlari: ${matchedCount}/8 ta mos keldi ${missingCount > 0 ? `<span style="color: #f87171;">(⚠️ ${missingCount} ta maydon bu jadvalda topilmadi)</span>` : `<span style="color: #34d399;">(✅ Barcha 8 ta maydon to'liq mos keldi)</span>`}</div>`;
-
-          mariaBox.innerHTML = `<div><strong>🐬 MariaDB Target (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div>${counterBadge}<div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+          mariaBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${matchedCount}/8 ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ta ustun</span></div>`;
         }
 
         appendLog(`🐬 MariaDB (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1257,12 +1233,95 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function openSamplePreviewModal() {
+    const modal = document.getElementById("samplePreviewModal");
+    const loading = document.getElementById("samplePreviewLoading");
+    const container = document.getElementById("samplePreviewContainer");
+    const emptyBox = document.getElementById("samplePreviewEmpty");
+    const emptyMsg = document.getElementById("samplePreviewEmptyMsg");
+    const tbody = document.getElementById("samplePreviewTableBody");
+    const subtitle = document.getElementById("samplePreviewSubtitle");
+
+    if (!modal) return;
+
+    modal.style.display = "flex";
+    if (loading) loading.style.display = "block";
+    if (container) container.style.display = "none";
+    if (emptyBox) emptyBox.style.display = "none";
+
+    try {
+      await saveSettings(true);
+
+      const res = await fetch("/api/schema-preview-sample");
+      const data = await res.json();
+
+      if (loading) loading.style.display = "none";
+
+      if (res.ok && data.status === "success" && data.sample_found && data.comparison && data.comparison.length > 0) {
+        if (subtitle) {
+          subtitle.innerHTML = `PostgreSQL <code style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 2px 6px; border-radius: 4px;">${data.pg_table}</code> ➔ MariaDB <code style="color: #34d399; background: rgba(52,211,153,0.15); padding: 2px 6px; border-radius: 4px;">${data.maria_table}</code> formatiga o'girish taqqoslanishi (1-ta real yozuv)`;
+        }
+
+        if (tbody) {
+          tbody.innerHTML = data.comparison.map(item => {
+            let statusStyle = "background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);";
+            if (item.status === "unmapped") {
+              statusStyle = "background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);";
+            } else if (item.status === "default" || item.status === "auto_generated") {
+              statusStyle = "background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);";
+            } else if (item.status === "custom") {
+              statusStyle = "background: rgba(167, 139, 250, 0.2); color: #c084fc; border: 1px solid rgba(167, 139, 250, 0.4);";
+            }
+
+            return `
+              <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-family: monospace;">
+                <td style="padding: 10px 14px;">
+                  <div style="font-weight: 600; color: #38bdf8;">${item.pg_col}</div>
+                  <div style="font-size: 12px; color: #e2e8f0; margin-top: 2px; word-break: break-all;">${item.pg_val !== undefined && item.pg_val !== null && item.pg_val !== "" ? item.pg_val : '<span style="color: #64748b; font-style: italic;">(null)</span>'}</div>
+                </td>
+                <td style="padding: 10px 8px; text-align: center; color: #64748b; font-size: 14px;">➔</td>
+                <td style="padding: 10px 14px;">
+                  <div style="font-weight: 600; color: #34d399;">${item.maria_col}</div>
+                  <div style="font-size: 12px; color: #e2e8f0; margin-top: 2px; word-break: break-all;">${item.maria_val !== undefined && item.maria_val !== null && item.maria_val !== "" ? item.maria_val : '<span style="color: #64748b; font-style: italic;">(null)</span>'}</div>
+                </td>
+                <td style="padding: 10px 14px; text-align: right;">
+                  <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: sans-serif; ${statusStyle}">
+                    ${item.badge_text || item.status}
+                  </span>
+                </td>
+              </tr>
+            `;
+          }).join("");
+        }
+
+        if (container) container.style.display = "block";
+        appendLog(`🔍 Jonli ma'lumotlar taqqoslash modal-da ko'rsatildi (Source PG: ${data.pg_table}).`, "info");
+      } else {
+        if (emptyMsg) {
+          emptyMsg.textContent = data.message || "PostgreSQL bazasida namunaviy ma'lumot topilmadi.";
+        }
+        if (emptyBox) emptyBox.style.display = "block";
+      }
+    } catch (err) {
+      if (loading) loading.style.display = "none";
+      if (emptyMsg) emptyMsg.textContent = "Xatolik: " + err.message;
+      if (emptyBox) emptyBox.style.display = "block";
+    }
+  }
+
+  function closeSamplePreviewModal() {
+    const modal = document.getElementById("samplePreviewModal");
+    if (modal) modal.style.display = "none";
+  }
+
   window.validateSchema = validateSchema;
   window.loadPgTableColumns = loadPgTableColumns;
   window.loadMariaTableColumns = loadMariaTableColumns;
   window.openTableSelectorModal = openTableSelectorModal;
   window.selectSelectorTable = selectSelectorTable;
   window.closeTableSelectorModal = closeTableSelectorModal;
+  window.openSamplePreviewModal = openSamplePreviewModal;
+  window.closeSamplePreviewModal = closeSamplePreviewModal;
   window.addCustomMappingRow = addCustomMappingRow;
   window.removeCustomMappingRow = removeCustomMappingRow;
 });

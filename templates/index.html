@@ -229,11 +229,16 @@
 
         <!-- Schema & Column Mapping Tab -->
         <div id="tab-mapping" class="tab-content">
-          <div style="margin-bottom: 14px; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+          <div style="margin-bottom: 14px; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <span>PostgreSQL manba jadvali hamda MariaDB nishon jadvali ustunlarini yonma-yon moslashtiring:</span>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="validateSchema()" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">
-              🔍 Pre-flight Validation
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openSamplePreviewModal()" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 4px; font-weight: 600; cursor: pointer;">
+                🔍 Jonli Ma'lumotlarni Taqqoslash
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="validateSchema()" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); display: inline-flex; align-items: center; gap: 4px; font-weight: 600; cursor: pointer;">
+                🔍 Pre-flight Validation
+              </button>
+            </div>
           </div>
           
           <div class="schema-split-grid">
@@ -411,7 +416,7 @@
   </div>
 
   <!-- Modern Table Selector Modal -->
-  <div id="tableSelectorModal" class="modal" style="display: none; z-index: 1150;">
+  <div id="tableSelectorModal" class="modal-overlay" style="display: none; z-index: 1150;">
     <div class="modal-content" style="max-width: 560px; border-radius: 16px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); padding: 20px;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
         <h3 id="tableSelectorTitle" style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc;">📋 Bazadagi Jadvallarni Tanlash</h3>
@@ -429,6 +434,62 @@
       </div>
       <div class="modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end; padding: 0;">
         <button type="button" class="btn btn-secondary" onclick="closeTableSelectorModal()" style="padding: 8px 18px; font-size: 13px;">Yopish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Sample Data Preview Modal -->
+  <div id="samplePreviewModal" class="modal-overlay" style="display: none; z-index: 1200;">
+    <div class="modal-content" style="max-width: 920px; width: 92%; border-radius: 16px; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7); padding: 24px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+        <div>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+            🔍 Jonli Ma'lumotlarni Taqqoslash (Live Sample Data Preview)
+          </h3>
+          <p id="samplePreviewSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            PostgreSQL manba jadvalidan 1 ta real yozuv va MariaDB ga o'girilgan nishon holati
+          </p>
+        </div>
+        <button type="button" onclick="closeSamplePreviewModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 26px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 0;">
+        <div id="samplePreviewLoading" style="display: none; text-align: center; padding: 40px; color: #818cf8; font-size: 14px; font-weight: 500;">
+          ⏳ PostgreSQL-dan real yozuv o'qilib, MariaDB formatiga o'girilmoqda...
+        </div>
+
+        <div id="samplePreviewContainer" style="display: none;">
+          <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(10, 15, 30, 0.6);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+              <thead>
+                <tr style="background: rgba(30, 41, 59, 0.8); border-bottom: 1px solid var(--border-color); color: #cbd5e1; font-weight: 600;">
+                  <th style="padding: 12px 14px; width: 32%;">🐘 PostgreSQL (Source Column & Value)</th>
+                  <th style="padding: 12px 8px; width: 6%; text-align: center;">➔</th>
+                  <th style="padding: 12px 14px; width: 38%;">🐬 MariaDB (Target Column & Transformed)</th>
+                  <th style="padding: 12px 14px; width: 24%; text-align: right;">Holat (Badge)</th>
+                </tr>
+              </thead>
+              <tbody id="samplePreviewTableBody">
+                <!-- Rows dynamically injected here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="samplePreviewEmpty" style="display: none; text-align: center; padding: 36px 20px; background: rgba(30, 41, 59, 0.4); border-radius: 12px; border: 1px dashed var(--border-color);">
+          <div style="font-size: 32px; margin-bottom: 8px;">⚠️</div>
+          <div id="samplePreviewEmptyMsg" style="color: #fbbf24; font-size: 14px; font-weight: 600;">PostgreSQL bazasida namunaviy yozuv topilmadi.</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Iltimos, PostgreSQL ulanish sozlamalari hamda jadval nomini tekshiring.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; padding: 0;">
+        <button type="button" class="btn btn-secondary" onclick="openSamplePreviewModal()" style="font-size: 12px; padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          🔄 Qayta Yuklash
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeSamplePreviewModal()" style="padding: 8px 20px; font-size: 13px; border-radius: 8px;">
+          Yopish
+        </button>
       </div>
     </div>
   </div>

@@ -14,6 +14,7 @@ from src.db_client import MariaDBClient
 from src.pg_client import PostgreSQLClient
 from src.csv_importer import CSVImporter
 from src.daily_syncer import DailySyncer, get_sync_progress_state
+from src.lookup_service import LookupService
 
 app = FastAPI(title="PostgreSQL to MariaDB Migration & Sync Dashboard")
 
@@ -316,6 +317,225 @@ def validate_schema():
             "available_tables": pg_available_tables,
             "message": pg_status.get("message", "")
         }
+    }
+
+@app.get("/api/schema-preview-sample")
+def get_schema_preview_sample():
+    import hashlib
+    pg_client = PostgreSQLClient()
+    db_client = MariaDBClient()
+    
+    rules = {}
+    if os.path.exists(MAPPING_RULES_PATH):
+        try:
+            with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
+                rules = json.load(f)
+        except Exception:
+            pass
+
+    pg_mapping = rules.get("pg_schema_mapping", {})
+    maria_mapping = rules.get("mariadb_target_mapping", {})
+    custom_maps = rules.get("custom_mappings", {})
+
+    pg_table = pg_mapping.get("table_name", "charging_history")
+    maria_table = maria_mapping.get("table_name", "TCSP_CHARGE_HIST")
+
+    st_col = pg_mapping.get("station_name_col", "station_name")
+    cp_col = pg_mapping.get("charger_name_col", "charger_name")
+    begin_col = pg_mapping.get("begin_time_col", "begin_time")
+    end_col = pg_mapping.get("end_time_col", "end_time")
+    power_col = pg_mapping.get("power_kwh_col", "power_kwh")
+    price_col = pg_mapping.get("price_won_col", "price_won")
+    card_col = pg_mapping.get("card_no_col", "card_no")
+    pay_col = pg_mapping.get("pay_type_col", "pay_type")
+
+    m_tx_col = maria_mapping.get("transaction_id_col", "transactionId")
+    m_cs_col = maria_mapping.get("cs_id_col", "csId")
+    m_cp_col = maria_mapping.get("cp_id_col", "cpId")
+    m_begin_col = maria_mapping.get("begin_col", "begin")
+    m_end_col = maria_mapping.get("end_col", "end")
+    m_power_col = maria_mapping.get("power_col", "power")
+    m_price_col = maria_mapping.get("price_col", "totalPrice")
+    m_card_col = maria_mapping.get("card_no_col", "cardNo")
+
+    conn = pg_client.get_connection()
+    sample_row = None
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT * FROM {pg_table} ORDER BY 1 DESC LIMIT 1")
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute(f"SELECT * FROM {pg_table} LIMIT 1")
+                row = cursor.fetchone()
+            if row:
+                col_names = [desc[0] for desc in cursor.description]
+                sample_row = dict(zip(col_names, row))
+            conn.close()
+        except Exception as e:
+            if conn:
+                conn.close()
+            logging.warning(f"Error fetching sample row from PG: {e}")
+
+    if not sample_row:
+        return {
+            "status": "success",
+            "sample_found": False,
+            "pg_table": pg_table,
+            "maria_table": maria_table,
+            "message": "PostgreSQL bazasida namunaviy ma'lumot topilmadi yoki ulanish mavjud emas.",
+            "comparison": []
+        }
+
+    lookup_service = LookupService(db_client)
+    st_val = sample_row.get(st_col, "")
+    cp_val = sample_row.get(cp_col, "")
+    cs_id = lookup_service.get_cs_id(st_val) if st_val else None
+    cp_id = lookup_service.get_cp_id(cs_id, cp_val) if (cs_id and cp_val) else None
+
+    begin_str = str(sample_row.get(begin_col, ""))
+    end_str = str(sample_row.get(end_col, ""))
+    power_val = sample_row.get(power_col, 0)
+    price_val = sample_row.get(price_col, 0)
+    card_val = sample_row.get(card_col, "")
+    pay_val = sample_row.get(pay_col, "")
+
+    raw_hash = f"{cs_id or 'CS_NULL'}_{cp_id or 'CP_NULL'}_{begin_str}"
+    h = int(hashlib.md5(raw_hash.encode('utf-8')).hexdigest()[:12], 16)
+    tx_id = -(1000000 + (h % 899999999999))
+
+    comparison = [
+        {
+            "field_label": "Transaction ID",
+            "pg_col": "(MD5 Hash Generator)",
+            "pg_val": raw_hash,
+            "maria_col": m_tx_col,
+            "maria_val": str(tx_id),
+            "status": "auto_generated",
+            "badge_text": "⚙️ Auto Hash ID"
+        },
+        {
+            "field_label": "Station -> CS ID",
+            "pg_col": st_col,
+            "pg_val": str(st_val),
+            "maria_col": m_cs_col,
+            "maria_val": str(cs_id or "(Topilmadi)"),
+            "status": "mapped" if cs_id else "unmapped",
+            "badge_text": "⚡ Lookup CS ID" if cs_id else "⚠️ CS ID topilmadi"
+        },
+        {
+            "field_label": "Charger -> CP ID",
+            "pg_col": cp_col,
+            "pg_val": str(cp_val),
+            "maria_col": m_cp_col,
+            "maria_val": str(cp_id or "(Topilmadi)"),
+            "status": "mapped" if cp_id else "unmapped",
+            "badge_text": "⚡ Lookup CP ID" if cp_id else "⚠️ CP ID topilmadi"
+        },
+        {
+            "field_label": "Begin Time",
+            "pg_col": begin_col,
+            "pg_val": begin_str,
+            "maria_col": m_begin_col,
+            "maria_val": begin_str,
+            "status": "mapped" if begin_str else "unmapped",
+            "badge_text": "✅ Mos keldi" if begin_str else "⚠️ Bo'sh"
+        },
+        {
+            "field_label": "End Time",
+            "pg_col": end_col,
+            "pg_val": end_str,
+            "maria_col": m_end_col,
+            "maria_val": end_str,
+            "status": "mapped" if end_str else "unmapped",
+            "badge_text": "✅ Mos keldi" if end_str else "⚠️ Bo'sh"
+        },
+        {
+            "field_label": "Power (kWh)",
+            "pg_col": power_col,
+            "pg_val": str(power_val),
+            "maria_col": m_power_col,
+            "maria_val": f"{float(power_val):.2f}" if power_val is not None else "0.00",
+            "status": "mapped",
+            "badge_text": "✅ FLOAT"
+        },
+        {
+            "field_label": "Price (Won)",
+            "pg_col": price_col,
+            "pg_val": str(price_val),
+            "maria_col": m_price_col,
+            "maria_val": str(int(float(price_val))) if price_val is not None else "0",
+            "status": "mapped",
+            "badge_text": "✅ INT"
+        },
+        {
+            "field_label": "Card No",
+            "pg_col": card_col,
+            "pg_val": str(card_val),
+            "maria_col": m_card_col,
+            "maria_val": str(card_val),
+            "status": "mapped",
+            "badge_text": "✅ Mos keldi"
+        },
+        {
+            "field_label": "Pay / Roaming Type",
+            "pg_col": pay_col,
+            "pg_val": str(pay_val),
+            "maria_col": "roamingType",
+            "maria_val": str(pay_val),
+            "status": "mapped",
+            "badge_text": "✅ Mos keldi"
+        },
+        {
+            "field_label": "Model ID",
+            "pg_col": "(Standart)",
+            "pg_val": "-",
+            "maria_col": "modelId",
+            "maria_val": "0",
+            "status": "default",
+            "badge_text": "⚙️ Default: 0"
+        },
+        {
+            "field_label": "Connector ID",
+            "pg_col": "(Standart)",
+            "pg_val": "-",
+            "maria_col": "connectorId",
+            "maria_val": "1",
+            "status": "default",
+            "badge_text": "⚙️ Default: 1"
+        },
+        {
+            "field_label": "Power Unit",
+            "pg_col": "(Standart)",
+            "pg_val": "-",
+            "maria_col": "powerUnit",
+            "maria_val": "kWh",
+            "status": "default",
+            "badge_text": "⚙️ Default: kWh"
+        }
+    ]
+
+    if isinstance(custom_maps, dict):
+        for pg_c, maria_c in custom_maps.items():
+            if pg_c and maria_c:
+                c_val = str(sample_row.get(pg_c, ""))
+                comparison.append({
+                    "field_label": f"Custom ({pg_c} ➔ {maria_c})",
+                    "pg_col": pg_c,
+                    "pg_val": c_val,
+                    "maria_col": maria_c,
+                    "maria_val": c_val,
+                    "status": "custom",
+                    "badge_text": "✨ Dynamic Mapping"
+                })
+
+    return {
+        "status": "success",
+        "sample_found": True,
+        "pg_table": pg_table,
+        "maria_table": maria_table,
+        "raw_pg_row": sample_row,
+        "comparison": comparison
     }
 
 @app.post("/api/test-mariadb")
