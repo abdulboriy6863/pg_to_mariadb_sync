@@ -976,7 +976,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (p.connected && !p.table_ok) {
           pHtml += `<div style="color: #fbbf24; font-size: 11px; margin-top: 3px;">⚠️ '${pgTable}' jadvali PostgreSQL bazasida topilmadi.</div>`;
           if (p.available_tables && p.available_tables.length > 0) {
-            pHtml += `<div style="font-size: 11px; opacity: 0.9; margin-top: 3px;">💡 <strong>Baza ichidagi real jadvallar:</strong> ${p.available_tables.slice(0, 6).join(", ")}${p.available_tables.length > 6 ? "..." : ""}</div>`;
+            const tableBadges = p.available_tables.slice(0, 8).map(t => `<span onclick="applyRecommendedTable('postgres', '${t}')" style="display: inline-block; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 7px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-right: 4px; margin-top: 4px;" title="Tanlash uchun bosing">🐘 ${t}</span>`).join(" ");
+            pHtml += `<div style="font-size: 11px; margin-top: 4px;">💡 <strong>Baza ichidagi real jadvallar (tanlash uchun bosing):</strong><br>${tableBadges}</div>`;
           }
         } else {
           pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
