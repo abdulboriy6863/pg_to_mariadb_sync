@@ -831,14 +831,18 @@ document.addEventListener("DOMContentLoaded", () => {
     logTerminal.scrollTop = logTerminal.scrollHeight;
   }
   async function validateSchema() {
-    const resBox = document.getElementById("schemaValidationResult");
-    if (resBox) {
-      resBox.style.display = "block";
-      resBox.style.background = "rgba(59, 130, 246, 0.15)";
-      resBox.style.color = "#60a5fa";
-      resBox.style.border = "1px solid rgba(59, 130, 246, 0.3)";
-      resBox.innerHTML = "⏳ Pre-flight schema Validation bajarilmoqda...";
-    }
+    const mariaBox = document.getElementById("schemaValidationResult");
+    const pgBox = document.getElementById("pgSchemaValidationResult");
+
+    [mariaBox, pgBox].forEach(b => {
+      if (b) {
+        b.style.display = "block";
+        b.style.background = "rgba(59, 130, 246, 0.15)";
+        b.style.color = "#60a5fa";
+        b.style.border = "1px solid rgba(59, 130, 246, 0.3)";
+        b.innerHTML = "⏳ Pre-flight schema validation bajarilmoqda...";
+      }
+    });
 
     try {
       await saveSettings(true);
@@ -850,32 +854,38 @@ document.addEventListener("DOMContentLoaded", () => {
         const m = data.mariadb;
         const p = data.postgres;
         
-        let html = `<div><strong>🐬 MariaDB Table (${m.table_name}):</strong> ${m.exists ? "✅ Mavjud" : "⚠️ Mavjud emas (ko'chirishda avto-yaratiladi)"}</div>`;
-        html += `<div><strong>📊 MariaDB Target Columns:</strong> ${m.matched_cols_count}/${m.total_req_cols} ta ustun mos keldi</div>`;
+        let mHtml = `<div><strong>🐬 MariaDB Target Table (${m.table_name}):</strong> ${m.exists ? "✅ Mavjud" : "⚠️ Mavjud emas (avto-yaratiladi)"}</div>`;
+        mHtml += `<div><strong>📊 Target Columns:</strong> ${m.matched_cols_count}/${m.total_req_cols} ta ustunlar mos keldi</div>`;
         if (m.missing_cols && m.missing_cols.length > 0) {
-          html += `<div style="color: #f87171;">⚠️ Yetishmayotgan target ustunlar: ${m.missing_cols.join(", ")}</div>`;
+          mHtml += `<div style="color: #f87171;">⚠️ Yetishmayotgan target ustunlar: ${m.missing_cols.join(", ")}</div>`;
         }
-        html += `<div><strong>🐘 PostgreSQL Source:</strong> ${p.connected ? "✅ Ulandi" : "❌ Ulanmadi"} | ${p.table_ok ? "✅ Source Table OK" : "⚠️ Table topilmadi"}</div>`;
 
-        if (resBox) {
-          resBox.style.background = m.exists ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
-          resBox.style.color = m.exists ? "#34d399" : "#fbbf24";
-          resBox.style.border = m.exists ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
-          resBox.innerHTML = html;
+        if (mariaBox) {
+          mariaBox.style.background = m.exists ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          mariaBox.style.color = m.exists ? "#34d399" : "#fbbf24";
+          mariaBox.style.border = m.exists ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          mariaBox.innerHTML = mHtml;
+        }
+
+        let pgTable = document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history";
+        let pHtml = `<div><strong>🐘 PostgreSQL Source (${pgTable}):</strong> ${p.connected ? "✅ Ulandi" : "❌ Ulanmadi (" + (p.message || "Offline") + ")"}</div>`;
+        pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
+
+        if (pgBox) {
+          pgBox.style.background = p.connected && p.table_ok ? "rgba(56, 189, 248, 0.15)" : "rgba(239, 68, 68, 0.15)";
+          pgBox.style.color = p.connected && p.table_ok ? "#38bdf8" : "#f87171";
+          pgBox.style.border = p.connected && p.table_ok ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)";
+          pgBox.innerHTML = pHtml;
         }
       } else {
-        if (resBox) {
-          resBox.style.background = "rgba(239, 68, 68, 0.15)";
-          resBox.style.color = "#f87171";
-          resBox.innerHTML = "❌ Validation xatosi: " + (data.detail || "Noma'lum xatolik");
-        }
+        const errHtml = "❌ Validation xatosi: " + (data.detail || "Noma'lum xatolik");
+        if (mariaBox) mariaBox.innerHTML = errHtml;
+        if (pgBox) pgBox.innerHTML = errHtml;
       }
     } catch (e) {
-      if (resBox) {
-        resBox.style.background = "rgba(239, 68, 68, 0.15)";
-        resBox.style.color = "#f87171";
-        resBox.innerHTML = "❌ Xatolik: " + e.message;
-      }
+      const errHtml = "❌ Xatolik: " + e.message;
+      if (mariaBox) mariaBox.innerHTML = errHtml;
+      if (pgBox) pgBox.innerHTML = errHtml;
     }
   }
 
