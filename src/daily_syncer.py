@@ -301,7 +301,7 @@ class DailySyncer:
             price_col = target_mapping.get("price_col", "totalPrice")
             card_col = target_mapping.get("card_no_col", "cardNo")
 
-            transformed.append({
+            rec_item = {
                 tx_col: tx_id,
                 cs_col: cs_id,
                 cp_col: cp_id,
@@ -316,7 +316,15 @@ class DailySyncer:
                 "roamingType": str(r.get("pay_type", "")),
                 "startSoc": 0,
                 "soc": 0
-            })
+            }
+
+            custom_maps = mapping_rules.get("custom_mappings", {})
+            if isinstance(custom_maps, dict):
+                for pg_c, maria_c in custom_maps.items():
+                    if pg_c and maria_c and pg_c in r:
+                        rec_item[maria_c] = r[pg_c]
+
+            transformed.append(rec_item)
 
             if idx % 500 == 0 or idx == total_pg_count - 1:
                 update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=idx + 1, unmapped=idx + 1 - len(transformed), message="Moslashtirilmoqda...")

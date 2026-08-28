@@ -354,6 +354,21 @@
                 </div>
               </div>
             </div>
+          <!-- Custom Extra Field Mappings Section -->
+          <div style="margin-top: 16px; background: rgba(15, 23, 42, 0.4); border: 1px dashed var(--border-color); border-radius: 12px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div>
+                <span style="font-weight: 700; color: #a78bfa; font-size: 13px;">✨ Qo'shimcha Ustunlar (Custom Dynamic Mappings)</span>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">Istalgancha qo'shimcha ustunlarni 1-click bilan bog'lang (masalan: soc ➔ startSoc)</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addCustomMappingRow()" style="font-size: 11px; padding: 5px 10px; border-radius: 6px; background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3);">
+                ➕ Qo'shimcha Ustun Qo'shish
+              </button>
+            </div>
+            
+            <div id="customMappingsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Dynamic rows will be inserted here -->
+            </div>
           </div>
 
           <datalist id="pgColumnsDatalist"></datalist>

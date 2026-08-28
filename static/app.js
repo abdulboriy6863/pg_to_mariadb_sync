@@ -134,10 +134,50 @@ document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("mapMariaCsIdCol")) document.getElementById("mapMariaCsIdCol").value = mariaTarget.cs_id_col || "csId";
         if (document.getElementById("mapMariaCpIdCol")) document.getElementById("mapMariaCpIdCol").value = mariaTarget.cp_id_col || "cpId";
         if (document.getElementById("mapMariaTxIdCol")) document.getElementById("mapMariaTxIdCol").value = mariaTarget.transaction_id_col || "transactionId";
+
+        const customContainer = document.getElementById("customMappingsContainer");
+        if (customContainer) {
+          customContainer.innerHTML = "";
+          const customMap = mapCfg.custom_mappings || {};
+          Object.entries(customMap).forEach(([pgCol, mariaCol]) => {
+            addCustomMappingRow(pgCol, mariaCol);
+          });
+        }
       } catch (e) {}
     } catch (err) {
       appendLog("Sozlamalarni yuklashda xatolik: " + err.message, "error");
     }
+  }
+
+  function addCustomMappingRow(pgCol = "", mariaCol = "") {
+    const container = document.getElementById("customMappingsContainer");
+    if (!container) return;
+
+    const rowId = "custom_row_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    const row = document.createElement("div");
+    row.id = rowId;
+    row.className = "custom-mapping-row";
+    row.style.cssText = "display: flex; gap: 8px; align-items: center;";
+
+    row.innerHTML = `
+      <div style="flex: 1;">
+        <input type="text" class="custom-pg-col" value="${pgCol}" placeholder="PostgreSQL Ustun (masalan: soc)" list="pgColumnsDatalist" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+      </div>
+      <span style="color: #a78bfa; font-weight: 700; font-size: 13px;">➔</span>
+      <div style="flex: 1;">
+        <input type="text" class="custom-maria-col" value="${mariaCol}" placeholder="MariaDB Target Ustun (masalan: startSoc)" list="mariaColumnsDatalist" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="removeCustomMappingRow('${rowId}')" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 10px; border-radius: 6px;" title="O'chirish">
+        🗑️
+      </button>
+    `;
+
+    container.appendChild(row);
+  }
+
+  function removeCustomMappingRow(rowId) {
+    const el = document.getElementById(rowId);
+    if (el) el.remove();
   }
 
   function closeSettingsModal() {
@@ -377,9 +417,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
+    const customMappings = {};
+    const customRows = document.querySelectorAll(".custom-mapping-row");
+    customRows.forEach(row => {
+      const pgInput = row.querySelector(".custom-pg-col")?.value?.trim();
+      const mariaInput = row.querySelector(".custom-maria-col")?.value?.trim();
+      if (pgInput && mariaInput) {
+        customMappings[pgInput] = mariaInput;
+      }
+    });
+
     const targetTable = (document.getElementById("mapMariaTable")?.value || "TCSP_CHARGE_HIST").trim();
     const mappingConfig = {
       target_table: targetTable,
+      custom_mappings: customMappings,
       mariadb_target_mapping: {
         table_name: targetTable,
         begin_col: (document.getElementById("mapMariaBeginCol")?.value || "begin").trim(),
@@ -1125,5 +1176,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.openTableSelectorModal = openTableSelectorModal;
   window.selectSelectorTable = selectSelectorTable;
   window.closeTableSelectorModal = closeTableSelectorModal;
+  window.addCustomMappingRow = addCustomMappingRow;
+  window.removeCustomMappingRow = removeCustomMappingRow;
 });
 

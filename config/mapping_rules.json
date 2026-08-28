@@ -11,6 +11,7 @@
     "cp_id_col": "cpId",
     "transaction_id_col": "transactionId"
   },
+  "custom_mappings": {},
   "pg_schema_mapping": {
     "table_name": "charging_history",
     "station_name_col": "station_name",
