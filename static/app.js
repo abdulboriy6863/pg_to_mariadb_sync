@@ -945,10 +945,27 @@ document.addEventListener("DOMContentLoaded", () => {
           mHtml += `<div style="color: #f87171;">⚠️ Yetishmayotgan target ustunlar: ${m.missing_cols.join(", ")}</div>`;
         }
 
+        if (data.domain_mismatch && data.recommendations) {
+          const recs = data.recommendations;
+          let recBtnHtml = "";
+          if (recs.rec_mariadb_table) {
+            recBtnHtml += `<button type="button" class="btn btn-secondary btn-sm" onclick="applyRecommendedTable('mariadb', '${recs.rec_mariadb_table}')" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 6px; cursor: pointer; font-weight: 600;">⚡ MariaDB jadvalini '${recs.rec_mariadb_table}' ga moslash</button> `;
+          }
+          if (recs.rec_pg_table) {
+            recBtnHtml += `<button type="button" class="btn btn-secondary btn-sm" onclick="applyRecommendedTable('postgres', '${recs.rec_pg_table}')" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 6px; cursor: pointer; font-weight: 600;">⚡ PG jadvalini '${recs.rec_pg_table}' ga moslash</button>`;
+          }
+
+          const mismatchAlert = `<div style="margin-top: 6px; padding: 8px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; color: #fbbf24; font-size: 11px;">⚠️ <strong>Sohaviy Nomutanosiblik (Domain Mismatch)!</strong><br>PostgreSQL (${data.postgres?.table_name}) va MariaDB (${data.mariadb?.table_name}) jadvallari har xil sohalarga tegishli.<br>${recBtnHtml}</div>`;
+
+          mHtml += mismatchAlert;
+
+          appendLog(`⚠️ Sohaviy Nomutanosiblik! PG ('${data.postgres?.table_name}') va MariaDB ('${data.mariadb?.table_name}') jadvallari har xil sohalarga tegishli.`, "warn");
+        }
+
         if (mariaBox) {
-          mariaBox.style.background = m.exists ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
-          mariaBox.style.color = m.exists ? "#34d399" : "#fbbf24";
-          mariaBox.style.border = m.exists ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          mariaBox.style.background = m.exists && !data.domain_mismatch ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          mariaBox.style.color = m.exists && !data.domain_mismatch ? "#34d399" : "#fbbf24";
+          mariaBox.style.border = m.exists && !data.domain_mismatch ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
           mariaBox.innerHTML = mHtml;
         }
 
@@ -957,9 +974,9 @@ document.addEventListener("DOMContentLoaded", () => {
         pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
 
         if (pgBox) {
-          pgBox.style.background = p.connected && p.table_ok ? "rgba(56, 189, 248, 0.15)" : "rgba(239, 68, 68, 0.15)";
-          pgBox.style.color = p.connected && p.table_ok ? "#38bdf8" : "#f87171";
-          pgBox.style.border = p.connected && p.table_ok ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(239, 68, 68, 0.3)";
+          pgBox.style.background = p.connected && p.table_ok && !data.domain_mismatch ? "rgba(56, 189, 248, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          pgBox.style.color = p.connected && p.table_ok && !data.domain_mismatch ? "#38bdf8" : "#fbbf24";
+          pgBox.style.border = p.connected && p.table_ok && !data.domain_mismatch ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
           pgBox.innerHTML = pHtml;
         }
       } else {
@@ -973,6 +990,23 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pgBox) pgBox.innerHTML = errHtml;
     }
   }
+
+  function applyRecommendedTable(dbType, tableName) {
+    if (dbType === "postgres") {
+      const el1 = document.getElementById("pgTableName");
+      const el2 = document.getElementById("mapPgTable");
+      if (el1) el1.value = tableName;
+      if (el2) el2.value = tableName;
+      loadPgTableColumns(tableName);
+    } else {
+      const el = document.getElementById("mapMariaTable");
+      if (el) el.value = tableName;
+      loadMariaTableColumns(tableName);
+    }
+    validateSchema();
+    appendLog(`⚡ Tavsiya etilgan jadval biriktirildi: ${tableName}`, "success");
+  }
+  window.applyRecommendedTable = applyRecommendedTable;
 
   let currentTablesList = [];
 

@@ -218,6 +218,8 @@ def validate_schema():
     pg_status = pg_client.test_connection()
     pg_connected = pg_status.get("status") in ["online", "success"]
     pg_table_ok = False
+    pg_table = "charging_history"
+    pg_cols_names = []
     if pg_connected:
         try:
             with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
@@ -225,12 +227,47 @@ def validate_schema():
                 pg_mapping = rules.get("pg_schema_mapping", {})
                 pg_table = pg_mapping.get("table_name", "charging_history")
                 pg_cols = pg_client.get_table_columns(pg_table)
+                pg_cols_names = [c.get("column_name", "") for c in pg_cols]
                 pg_table_ok = len(pg_cols) > 0
         except Exception:
             pass
 
+    def classify_domain(t_name, cols):
+        name_l = t_name.lower()
+        cols_l = [c.lower() for c in cols]
+        if "price" in name_l or "unit" in name_l or "policy" in name_l or any(c in cols_l for c in ["time_00", "apply_date", "pricepolicy"]):
+            return "tariff_price"
+        if "charge" in name_l or "hist" in name_l or "using" in name_l or any(c in cols_l for c in ["power", "power_kwh", "begin", "begin_time"]):
+            return "charge_history"
+        if "station" in name_l or "charger" in name_l or any(c in cols_l for c in ["station_name", "charger_name"]):
+            return "station_info"
+        return "general"
+
+    maria_cols_names = mariadb_schema["columns"] if mariadb_schema["exists"] else []
+    pg_domain = classify_domain(pg_table, pg_cols_names)
+    maria_domain = classify_domain(raw_table, maria_cols_names)
+    domain_mismatch = (pg_domain != "general" and maria_domain != "general" and pg_domain != maria_domain)
+
+    recommendations = {}
+    if domain_mismatch:
+        if pg_domain == "tariff_price":
+            recommendations["rec_mariadb_table"] = "tcsp_charge_price_hist"
+            recommendations["reason"] = f"PG `{pg_table}` jadvali Tarif Narxlari sohasi."
+        elif pg_domain == "charge_history":
+            recommendations["rec_mariadb_table"] = "TCSP_CHARGE_HIST"
+            recommendations["reason"] = f"PG `{pg_table}` jadvali Quvvatlash Tarixi sohasi."
+
+        if maria_domain == "charge_history":
+            recommendations["rec_pg_table"] = "charging_history"
+        elif maria_domain == "tariff_price":
+            recommendations["rec_pg_table"] = "unit_price_time"
+
     return {
         "status": "success",
+        "domain_mismatch": domain_mismatch,
+        "pg_domain": pg_domain,
+        "maria_domain": maria_domain,
+        "recommendations": recommendations,
         "mariadb": {
             "table_name": raw_table,
             "exists": mariadb_schema["exists"],
@@ -241,6 +278,7 @@ def validate_schema():
         },
         "postgres": {
             "connected": pg_connected,
+            "table_name": pg_table,
             "table_ok": pg_table_ok,
             "message": pg_status.get("message", "")
         }
