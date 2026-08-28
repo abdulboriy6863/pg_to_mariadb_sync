@@ -1,5 +1,16 @@
 {
   "target_table": "TCSP_CHARGE_HIST",
+  "pg_schema_mapping": {
+    "table_name": "charging_history",
+    "station_name_col": "station_name",
+    "charger_name_col": "charger_name",
+    "begin_time_col": "begin_time",
+    "end_time_col": "end_time",
+    "power_kwh_col": "power_kwh",
+    "price_won_col": "price_won",
+    "card_no_col": "card_no",
+    "pay_type_col": "pay_type"
+  },
   "column_mapping": {
     "충전시작 일시": "begin",
     "충전종료 일시": "end",

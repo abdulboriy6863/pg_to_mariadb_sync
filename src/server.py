@@ -132,6 +132,27 @@ def save_config(config_data: dict = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save config: {e}")
 
+MAPPING_RULES_PATH = os.path.join(BASE_DIR, "config", "mapping_rules.json")
+
+@app.get("/api/mapping-config")
+def get_mapping_config():
+    if os.path.exists(MAPPING_RULES_PATH):
+        try:
+            with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to read mapping config: {e}")
+    return {}
+
+@app.post("/api/mapping-config")
+def save_mapping_config(mapping_data: dict = Body(...)):
+    try:
+        with open(MAPPING_RULES_PATH, "w", encoding="utf-8") as f:
+            json.dump(mapping_data, f, indent=2, ensure_ascii=False)
+        return {"status": "success", "message": "Schema & column mappings saved successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save mapping config: {e}")
+
 @app.post("/api/test-postgres")
 def test_postgres(config_data: dict = Body(None)):
     pg_client = PostgreSQLClient()

@@ -50,7 +50,14 @@ class DailySyncer:
         self.mariadb_client = MariaDBClient(db_config_path)
         self.pg_client = PostgreSQLClient(db_config_path)
         self.lookup_service = LookupService(self.mariadb_client)
-        self.history_log_path = os.path.join(os.path.dirname(__file__), "..", "logs", "sync_history.json")
+        mapping_rules_path = os.path.join(os.path.dirname(__file__), "..", "config", "mapping_rules.json")
+        self.mapping_rules = {}
+        if os.path.exists(mapping_rules_path):
+            try:
+                with open(mapping_rules_path, "r", encoding="utf-8") as f:
+                    self.mapping_rules = json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading mapping rules: {e}")
 
     def _save_history_entry(self, entry):
         try:
@@ -134,37 +141,44 @@ class DailySyncer:
         logger.info(f"Initiating Daily Sync for Date(s): {date_summary_str} (dry_run={dry_run})")
         update_global_progress(is_running=True, status="querying_pg", message=f"PostgreSQL dan ({date_summary_str}) ma'lumotlar o'qilmoqda...")
 
+        pg_schema = self.mapping_rules.get("pg_schema_mapping", {})
         pg_cfg = self.db_config.get("postgresql", {})
-        pg_table_raw = pg_cfg.get("table_name") or pg_cfg.get("source_table") or "charging_history"
-        pg_table = "".join(c for c in pg_table_raw if c.isalnum() or c == '_') or "charging_history"
+
+        pg_table_raw = pg_schema.get("table_name") or pg_cfg.get("table_name") or pg_cfg.get("source_table") or "charging_history"
+        pg_table = "".join(c for c in str(pg_table_raw) if c.isalnum() or c == '_') or "charging_history"
+
+        st_col = "".join(c for c in str(pg_schema.get("station_name_col", "station_name")) if c.isalnum() or c == '_') or "station_name"
+        cp_col = "".join(c for c in str(pg_schema.get("charger_name_col", "charger_name")) if c.isalnum() or c == '_') or "charger_name"
+        begin_col = "".join(c for c in str(pg_schema.get("begin_time_col", "begin_time")) if c.isalnum() or c == '_') or "begin_time"
+        end_col = "".join(c for c in str(pg_schema.get("end_time_col", "end_time")) if c.isalnum() or c == '_') or "end_time"
+        power_col = "".join(c for c in str(pg_schema.get("power_kwh_col", "power_kwh")) if c.isalnum() or c == '_') or "power_kwh"
+        price_col = "".join(c for c in str(pg_schema.get("price_won_col", "price_won")) if c.isalnum() or c == '_') or "price_won"
+        card_col = "".join(c for c in str(pg_schema.get("card_no_col", "card_no")) if c.isalnum() or c == '_') or "card_no"
+        pay_col = "".join(c for c in str(pg_schema.get("pay_type_col", "pay_type")) if c.isalnum() or c == '_') or "pay_type"
 
         pg_records = []
         conn = self.pg_client.get_connection()
         if conn:
             try:
                 cursor = conn.cursor()
+                select_clause = f"""
+                    SELECT {st_col} AS station_name,
+                           {cp_col} AS charger_name,
+                           {begin_col} AS begin_time,
+                           {end_col} AS end_time,
+                           {power_col} AS power_kwh,
+                           {price_col} AS price_won,
+                           {card_col} AS card_no,
+                           {pay_col} AS pay_type
+                    FROM {pg_table}
+                """
                 if is_range_query:
-                    cursor.execute(f"""
-                        SELECT station_name, charger_name, begin_time, end_time, 
-                               power_kwh, price_won, card_no, pay_type
-                        FROM {pg_table}
-                        WHERE DATE(begin_time) >= %s AND DATE(begin_time) <= %s
-                    """, (start_date, end_date))
+                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) >= %s AND DATE({begin_col}) <= %s", (start_date, end_date))
                 elif len(target_dates) == 1:
-                    cursor.execute(f"""
-                        SELECT station_name, charger_name, begin_time, end_time, 
-                               power_kwh, price_won, card_no, pay_type
-                        FROM {pg_table}
-                        WHERE DATE(begin_time) = %s
-                    """, (target_dates[0],))
+                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) = %s", (target_dates[0],))
                 else:
                     placeholders = ", ".join(["%s"] * len(target_dates))
-                    cursor.execute(f"""
-                        SELECT station_name, charger_name, begin_time, end_time, 
-                               power_kwh, price_won, card_no, pay_type
-                        FROM {pg_table}
-                        WHERE DATE(begin_time) IN ({placeholders})
-                    """, tuple(target_dates))
+                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) IN ({placeholders})", tuple(target_dates))
 
                 columns = [desc[0] for desc in cursor.description]
                 for row in cursor.fetchall():

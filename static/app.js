@@ -108,6 +108,23 @@ document.addEventListener("DOMContentLoaded", () => {
       if (document.getElementById("autoSyncHour")) document.getElementById("autoSyncHour").value = autoSync.hour !== undefined ? autoSync.hour : 2;
       if (document.getElementById("autoSyncMinute")) document.getElementById("autoSyncMinute").value = autoSync.minute !== undefined ? autoSync.minute : 0;
       if (document.getElementById("autoSyncSecond")) document.getElementById("autoSyncSecond").value = autoSync.second !== undefined ? autoSync.second : 0;
+
+      try {
+        const mapRes = await fetch("/api/mapping-config");
+        const mapCfg = await mapRes.json();
+        const pgSchema = mapCfg.pg_schema_mapping || {};
+
+        if (document.getElementById("mapPgTable")) document.getElementById("mapPgTable").value = pgSchema.table_name || pg.table_name || "charging_history";
+        if (document.getElementById("mapPgStationCol")) document.getElementById("mapPgStationCol").value = pgSchema.station_name_col || "station_name";
+        if (document.getElementById("mapPgChargerCol")) document.getElementById("mapPgChargerCol").value = pgSchema.charger_name_col || "charger_name";
+        if (document.getElementById("mapPgBeginCol")) document.getElementById("mapPgBeginCol").value = pgSchema.begin_time_col || "begin_time";
+        if (document.getElementById("mapPgEndCol")) document.getElementById("mapPgEndCol").value = pgSchema.end_time_col || "end_time";
+        if (document.getElementById("mapPgPowerCol")) document.getElementById("mapPgPowerCol").value = pgSchema.power_kwh_col || "power_kwh";
+        if (document.getElementById("mapPgPriceCol")) document.getElementById("mapPgPriceCol").value = pgSchema.price_won_col || "price_won";
+        if (document.getElementById("mapPgCardCol")) document.getElementById("mapPgCardCol").value = pgSchema.card_no_col || "card_no";
+        if (document.getElementById("mapPgPayCol")) document.getElementById("mapPgPayCol").value = pgSchema.pay_type_col || "pay_type";
+        if (document.getElementById("mapMariaTable")) document.getElementById("mapMariaTable").value = mapCfg.target_table || "TCSP_CHARGE_HIST";
+      } catch (e) {}
     } catch (err) {
       appendLog("Sozlamalarni yuklashda xatolik: " + err.message, "error");
     }
@@ -368,6 +385,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
 
+      const mappingConfig = {
+        target_table: (document.getElementById("mapMariaTable")?.value || "TCSP_CHARGE_HIST").trim(),
+        pg_schema_mapping: {
+          table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history").trim(),
+          station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_name").trim(),
+          charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_name").trim(),
+          begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "begin_time").trim(),
+          end_time_col: (document.getElementById("mapPgEndCol")?.value || "end_time").trim(),
+          power_kwh_col: (document.getElementById("mapPgPowerCol")?.value || "power_kwh").trim(),
+          price_won_col: (document.getElementById("mapPgPriceCol")?.value || "price_won").trim(),
+          card_no_col: (document.getElementById("mapPgCardCol")?.value || "card_no").trim(),
+          pay_type_col: (document.getElementById("mapPgPayCol")?.value || "pay_type").trim()
+        }
+      };
+
       try {
         const res = await fetch("/api/config", {
           method: "POST",
@@ -375,8 +407,15 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify(fullConfig)
         });
         const result = await res.json();
+
+        await fetch("/api/mapping-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(mappingConfig)
+        });
+
         if (res.ok) {
-          appendLog("Baza va taymer sozlamalari muvaffaqiyatli saqlandi! db_config.json yangilandi va scheduler qayta sozlandi.", "success");
+          appendLog("Baza, taymer va schema mapping sozlamalari muvaffaqiyatli saqlandi!", "success");
           closeSettingsModal();
           await fetchStatus();
         } else {
