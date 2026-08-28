@@ -220,6 +220,10 @@ def validate_schema():
     pg_table_ok = False
     pg_table = "charging_history"
     pg_cols_names = []
+    pg_matched_cols = []
+    pg_missing_cols = []
+    req_pg_cols = []
+
     if pg_connected:
         try:
             with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
@@ -229,6 +233,25 @@ def validate_schema():
                 pg_cols = pg_client.get_table_columns(pg_table)
                 pg_cols_names = [c.get("column_name", "") for c in pg_cols]
                 pg_table_ok = len(pg_cols) > 0
+
+                req_pg_cols = [
+                    pg_mapping.get("station_name_col", "station_name"),
+                    pg_mapping.get("charger_name_col", "charger_name"),
+                    pg_mapping.get("begin_time_col", "begin_time"),
+                    pg_mapping.get("end_time_col", "end_time"),
+                    pg_mapping.get("power_kwh_col", "power_kwh"),
+                    pg_mapping.get("price_won_col", "price_won"),
+                    pg_mapping.get("card_no_col", "card_no"),
+                    pg_mapping.get("pay_type_col", "pay_type")
+                ]
+
+                if pg_table_ok:
+                    existing_pg_lower = [c.lower() for c in pg_cols_names]
+                    for col in req_pg_cols:
+                        if col and col.lower() in existing_pg_lower:
+                            pg_matched_cols.append(col)
+                        elif col:
+                            pg_missing_cols.append(col)
         except Exception:
             pass
 
@@ -280,6 +303,9 @@ def validate_schema():
             "connected": pg_connected,
             "table_name": pg_table,
             "table_ok": pg_table_ok,
+            "matched_cols_count": len(pg_matched_cols),
+            "total_req_cols": len(req_pg_cols),
+            "missing_cols": pg_missing_cols,
             "message": pg_status.get("message", "")
         }
     }

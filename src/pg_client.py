@@ -97,7 +97,8 @@ class PostgreSQLClient:
             cursor.execute("""
                 SELECT column_name, data_type 
                 FROM information_schema.columns 
-                WHERE table_name = %s
+                WHERE LOWER(table_name) = LOWER(%s)
+                  AND table_schema NOT IN ('pg_catalog', 'information_schema')
                 ORDER BY ordinal_position;
             """, (table_name,))
             cols = [{"column_name": row[0], "data_type": row[1]} for row in cursor.fetchall()]

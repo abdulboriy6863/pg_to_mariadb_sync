@@ -969,9 +969,16 @@ document.addEventListener("DOMContentLoaded", () => {
           mariaBox.innerHTML = mHtml;
         }
 
-        let pgTable = document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history";
-        let pHtml = `<div><strong>🐘 PostgreSQL Source (${pgTable}):</strong> ${p.connected ? "✅ Ulandi" : "❌ Ulanmadi (" + (p.message || "Offline") + ")"}</div>`;
-        pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
+        let pgTable = document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || p.table_name || "charging_history";
+        let pHtml = `<div><strong>🐘 PostgreSQL Source Table (${pgTable}):</strong> ${p.connected && p.table_ok ? "✅ Mavjud" : (p.connected ? "⚠️ Jadval topilmadi" : "❌ Ulanmadi (" + (p.message || "Offline") + ")")}</div>`;
+        if (p.matched_cols_count !== undefined && p.total_req_cols !== undefined && p.table_ok) {
+          pHtml += `<div><strong>📊 Source Columns:</strong> ${p.matched_cols_count}/${p.total_req_cols} ta ustunlar mos keldi</div>`;
+        } else {
+          pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
+        }
+        if (p.missing_cols && p.missing_cols.length > 0 && p.table_ok) {
+          pHtml += `<div style="color: #f87171;">⚠️ Yetishmayotgan source ustunlar: ${p.missing_cols.join(", ")}</div>`;
+        }
 
         if (pgBox) {
           pgBox.style.background = p.connected && p.table_ok && !data.domain_mismatch ? "rgba(56, 189, 248, 0.15)" : "rgba(245, 158, 11, 0.15)";
