@@ -1019,15 +1019,19 @@ document.addEventListener("DOMContentLoaded", () => {
           dl.innerHTML = colNames.map(c => `<option value="${c}"></option>`).join("");
         }
 
-        autoMatchPgColumns(colNames);
-        
+        const matchedCount = autoMatchPgColumns(colNames);
+        const missingCount = 8 - matchedCount;
+
         const pgBox = document.getElementById("pgSchemaValidationResult");
         if (pgBox) {
           pgBox.style.display = "block";
-          pgBox.style.background = "rgba(56, 189, 248, 0.15)";
-          pgBox.style.color = "#38bdf8";
-          pgBox.style.border = "1px solid rgba(56, 189, 248, 0.3)";
-          pgBox.innerHTML = `<div><strong>🐘 PostgreSQL (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div><div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+          pgBox.style.background = matchedCount === 8 ? "rgba(56, 189, 248, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          pgBox.style.color = matchedCount === 8 ? "#38bdf8" : "#fbbf24";
+          pgBox.style.border = matchedCount === 8 ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+
+          const counterBadge = `<div style="margin-top: 4px; font-size: 11px; font-weight: 600;">📊 Quvvatlash maydonlari: ${matchedCount}/8 ta mos keldi ${missingCount > 0 ? `<span style="color: #f87171;">(⚠️ ${missingCount} ta maydon bu jadvalda topilmadi)</span>` : `<span style="color: #34d399;">(✅ Barcha 8 ta maydon to'liq mos keldi)</span>`}</div>`;
+
+          pgBox.innerHTML = `<div><strong>🐘 PostgreSQL (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div>${counterBadge}<div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
         }
 
         appendLog(`🐘 PostgreSQL (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1047,29 +1051,28 @@ document.addEventListener("DOMContentLoaded", () => {
       return "";
     }
 
-    const stInput = document.getElementById("mapPgStationCol");
-    if (stInput) stInput.value = findBest(["station", "cs_name", "biz"], "station_name");
+    const pgInputs = [
+      { id: "mapPgStationCol", kw: ["station", "cs_name", "biz"], def: "station_name" },
+      { id: "mapPgChargerCol", kw: ["charger", "cp_name", "cp"], def: "charger_name" },
+      { id: "mapPgBeginCol", kw: ["begin", "start"], def: "begin_time" },
+      { id: "mapPgEndCol", kw: ["end", "finish", "stop"], def: "end_time" },
+      { id: "mapPgPowerCol", kw: ["power", "kwh", "watt", "energy"], def: "power_kwh" },
+      { id: "mapPgPriceCol", kw: ["price", "won", "amount", "total", "cost"], def: "price_won" },
+      { id: "mapPgCardCol", kw: ["card", "cardno"], def: "card_no" },
+      { id: "mapPgPayCol", kw: ["pay", "type", "roaming"], def: "pay_type" }
+    ];
 
-    const cpInput = document.getElementById("mapPgChargerCol");
-    if (cpInput) cpInput.value = findBest(["charger", "cp_name", "cp"], "charger_name");
+    let matchedCount = 0;
+    pgInputs.forEach(item => {
+      const el = document.getElementById(item.id);
+      if (el) {
+        const val = findBest(item.kw, item.def);
+        el.value = val;
+        if (val) matchedCount++;
+      }
+    });
 
-    const bgInput = document.getElementById("mapPgBeginCol");
-    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin_time");
-
-    const edInput = document.getElementById("mapPgEndCol");
-    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end_time");
-
-    const pwInput = document.getElementById("mapPgPowerCol");
-    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power_kwh");
-
-    const prInput = document.getElementById("mapPgPriceCol");
-    if (prInput) prInput.value = findBest(["price", "won", "amount", "total", "cost"], "price_won");
-
-    const cdInput = document.getElementById("mapPgCardCol");
-    if (cdInput) cdInput.value = findBest(["card", "cardno"], "card_no");
-
-    const pyInput = document.getElementById("mapPgPayCol");
-    if (pyInput) pyInput.value = findBest(["pay", "type", "roaming"], "pay_type");
+    return matchedCount;
   }
 
   async function loadMariaTableColumns(tableName) {
@@ -1087,15 +1090,19 @@ document.addEventListener("DOMContentLoaded", () => {
           dl.innerHTML = colNames.map(c => `<option value="${c}"></option>`).join("");
         }
 
-        autoMatchMariaColumns(colNames);
+        const matchedCount = autoMatchMariaColumns(colNames);
+        const missingCount = 8 - matchedCount;
 
         const mariaBox = document.getElementById("schemaValidationResult");
         if (mariaBox) {
           mariaBox.style.display = "block";
-          mariaBox.style.background = "rgba(52, 211, 153, 0.15)";
-          mariaBox.style.color = "#34d399";
-          mariaBox.style.border = "1px solid rgba(52, 211, 153, 0.3)";
-          mariaBox.innerHTML = `<div><strong>🐬 MariaDB Target (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div><div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+          mariaBox.style.background = matchedCount === 8 ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          mariaBox.style.color = matchedCount === 8 ? "#34d399" : "#fbbf24";
+          mariaBox.style.border = matchedCount === 8 ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(52, 211, 153, 0.3)";
+
+          const counterBadge = `<div style="margin-top: 4px; font-size: 11px; font-weight: 600;">📊 Quvvatlash maydonlari: ${matchedCount}/8 ta mos keldi ${missingCount > 0 ? `<span style="color: #f87171;">(⚠️ ${missingCount} ta maydon bu jadvalda topilmadi)</span>` : `<span style="color: #34d399;">(✅ Barcha 8 ta maydon to'liq mos keldi)</span>`}</div>`;
+
+          mariaBox.innerHTML = `<div><strong>🐬 MariaDB Target (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div>${counterBadge}<div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
         }
 
         appendLog(`🐬 MariaDB (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1115,29 +1122,28 @@ document.addEventListener("DOMContentLoaded", () => {
       return "";
     }
 
-    const bgInput = document.getElementById("mapMariaBeginCol");
-    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin");
+    const mariaInputs = [
+      { id: "mapMariaBeginCol", kw: ["begin", "start"], def: "begin" },
+      { id: "mapMariaEndCol", kw: ["end", "finish", "stop"], def: "end" },
+      { id: "mapMariaPowerCol", kw: ["power", "kwh", "watt", "energy"], def: "power" },
+      { id: "mapMariaPriceCol", kw: ["totalprice", "price", "amount", "cost", "won"], def: "totalPrice" },
+      { id: "mapMariaCardCol", kw: ["cardno", "card"], def: "cardNo" },
+      { id: "mapMariaCsIdCol", kw: ["csid", "cs_id"], def: "csId" },
+      { id: "mapMariaCpIdCol", kw: ["cpid", "cp_id"], def: "cpId" },
+      { id: "mapMariaTxIdCol", kw: ["transactionid", "txid", "tx_id"], def: "transactionId" }
+    ];
 
-    const edInput = document.getElementById("mapMariaEndCol");
-    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end");
+    let matchedCount = 0;
+    mariaInputs.forEach(item => {
+      const el = document.getElementById(item.id);
+      if (el) {
+        const val = findBest(item.kw, item.def);
+        el.value = val;
+        if (val) matchedCount++;
+      }
+    });
 
-    const pwInput = document.getElementById("mapMariaPowerCol");
-    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power");
-
-    const prInput = document.getElementById("mapMariaPriceCol");
-    if (prInput) prInput.value = findBest(["totalprice", "price", "amount", "cost", "won"], "totalPrice");
-
-    const cdInput = document.getElementById("mapMariaCardCol");
-    if (cdInput) cdInput.value = findBest(["cardno", "card"], "cardNo");
-
-    const csInput = document.getElementById("mapMariaCsIdCol");
-    if (csInput) csInput.value = findBest(["csid", "cs_id"], "csId");
-
-    const cpInput = document.getElementById("mapMariaCpIdCol");
-    if (cpInput) cpInput.value = findBest(["cpid", "cp_id"], "cpId");
-
-    const txInput = document.getElementById("mapMariaTxIdCol");
-    if (txInput) txInput.value = findBest(["transactionid", "txid", "tx_id"], "transactionId");
+    return matchedCount;
   }
 
   function selectSelectorTable(tableName, dbType) {
