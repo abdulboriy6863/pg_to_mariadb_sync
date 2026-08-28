@@ -50,6 +50,7 @@ class DailySyncer:
         self.mariadb_client = MariaDBClient(db_config_path)
         self.pg_client = PostgreSQLClient(db_config_path)
         self.lookup_service = LookupService(self.mariadb_client)
+        self.history_log_path = os.path.join(os.path.dirname(__file__), "..", "config", "sync_history.json")
         mapping_rules_path = os.path.join(os.path.dirname(__file__), "..", "config", "mapping_rules.json")
         self.mapping_rules = {}
         if os.path.exists(mapping_rules_path):
