@@ -178,6 +178,11 @@ class DailySyncer:
                 "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "message": err_msg,
+                "total_pg_records": 0,
+                "inserted": 0,
+                "duplicates_skipped": 0,
+                "transformed_count": 0,
+                "unmapped_count": 0,
                 "count": 0
             }
             if not dry_run:
@@ -187,11 +192,17 @@ class DailySyncer:
         if not pg_records:
             logger.info(f"No records found in PostgreSQL for {date_summary_str}.")
             msg = f"No records found in PG for date range {date_summary_str}"
-            update_global_progress(is_running=False, status="completed", message=msg)
+            update_global_progress(is_running=False, status="completed", total=0, processed=0, inserted=0, duplicates=0, unmapped=0, message=msg)
             result = {
                 "status": "success",
+                "mode": "dry_run" if dry_run else "live",
                 "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_pg_records": 0,
+                "inserted": 0,
+                "duplicates_skipped": 0,
+                "transformed_count": 0,
+                "unmapped_count": 0,
                 "count": 0,
                 "message": msg
             }

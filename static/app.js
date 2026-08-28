@@ -714,10 +714,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await res.json();
 
       if (result.status === "success") {
-        if (dryRun) {
-          appendLog(`✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${result.total_pg_records} | Transformed: ${result.transformed_count} | Unmapped: ${result.unmapped_count}`, "success");
+        const totalPg = result.total_pg_records !== undefined ? result.total_pg_records : (result.count ?? 0);
+        const inserted = result.inserted ?? 0;
+        const dupes = result.duplicates_skipped ?? 0;
+        const transformed = result.transformed_count ?? 0;
+        const unmapped = result.unmapped_count ?? 0;
+
+        if (totalPg === 0) {
+          appendLog(`ℹ️ PostgreSQL bazasida (${result.target_date || rangeLabel}) sanalari bo'yicha ma'lumot topilmadi (0 ta yozuv).`, "info");
+        } else if (dryRun) {
+          appendLog(`✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${totalPg} | Transformed: ${transformed} | Unmapped: ${unmapped}`, "success");
         } else {
-          appendLog(`🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${result.total_pg_records} | Kiritildi: ${result.inserted} | Dublikat: ${result.duplicates_skipped}`, "success");
+          appendLog(`🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
           fetchStatus();
         }
         if (result.missing_stations && result.missing_stations.length > 0) {
