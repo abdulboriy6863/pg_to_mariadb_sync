@@ -141,6 +141,23 @@ class DailySyncer:
         logger.info(f"Initiating Daily Sync for Date(s): {date_summary_str} (dry_run={dry_run})")
         update_global_progress(is_running=True, status="querying_pg", message=f"PostgreSQL dan ({date_summary_str}) ma'lumotlar o'qilmoqda...")
 
+        # Reload configuration dynamically
+        mapping_rules_path = os.path.join(os.path.dirname(__file__), "..", "config", "mapping_rules.json")
+        if os.path.exists(mapping_rules_path):
+            try:
+                with open(mapping_rules_path, "r", encoding="utf-8") as f:
+                    self.mapping_rules = json.load(f)
+            except Exception as e:
+                logger.error(f"Error reloading mapping rules: {e}")
+
+        db_config_path = os.path.join(os.path.dirname(__file__), "..", "config", "db_config.json")
+        if os.path.exists(db_config_path):
+            try:
+                with open(db_config_path, "r", encoding="utf-8") as f:
+                    self.db_config = json.load(f)
+            except Exception as e:
+                logger.error(f"Error reloading db config: {e}")
+
         pg_schema = self.mapping_rules.get("pg_schema_mapping", {})
         pg_cfg = self.db_config.get("postgresql", {})
 

@@ -202,15 +202,17 @@ def validate_schema():
     target_missing_cols = []
     if mariadb_schema["exists"]:
         existing_cols = mariadb_schema["columns"]
+        existing_cols_lower = [c.lower() for c in existing_cols]
         for col in req_target_cols:
-            if col in existing_cols:
+            if col.lower() in existing_cols_lower:
                 target_matched_cols.append(col)
             else:
                 target_missing_cols.append(col)
 
     pg_status = pg_client.test_connection()
+    pg_connected = pg_status.get("status") in ["online", "success"]
     pg_table_ok = False
-    if pg_status.get("status") == "success":
+    if pg_connected:
         try:
             with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
                 rules = json.load(f)
@@ -232,8 +234,9 @@ def validate_schema():
             "message": mariadb_schema["message"]
         },
         "postgres": {
-            "connected": pg_status.get("status") == "success",
-            "table_ok": pg_table_ok
+            "connected": pg_connected,
+            "table_ok": pg_table_ok,
+            "message": pg_status.get("message", "")
         }
     }
 
