@@ -868,9 +868,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const rangeLabel = (startDate && endDate) ? `${startDate} ~ ${endDate}` : (startDate || endDate || 'Kechagi kun');
-    const modeText = dryRun ? "Dry-Run Sinov" : "Real Bazaga Sync";
-    appendLog(`PostgreSQL Daily Sync boshlandi (${modeText}) | Sana: ${rangeLabel}...`, "info");
+    const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+    const rangeLabel = (startDate && endDate) ? `${startDate} ~ ${endDate}` : (startDate || endDate || (isKo ? '어제' : 'Kechagi kun'));
+    const modeText = dryRun ? (isKo ? "Dry-Run 테스트" : "Dry-Run Sinov") : (isKo ? "실제 DB 동기화" : "Real Bazaga Sync");
+    appendLog(isKo ? `PostgreSQL 데일리 동기화 시작 (${modeText}) | 날짜: ${rangeLabel}...` : `PostgreSQL Daily Sync boshlandi (${modeText}) | Sana: ${rangeLabel}...`, "info");
 
     try {
       const formData = new FormData();
@@ -892,21 +893,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const unmapped = result.unmapped_count ?? 0;
 
         if (totalPg === 0) {
-          appendLog(`ℹ️ PostgreSQL bazasida (${result.target_date || rangeLabel}) sanalari bo'yicha ma'lumot topilmadi (0 ta yozuv).`, "info");
+          appendLog(isKo ? `ℹ️ PostgreSQL DB에서 (${result.target_date || rangeLabel}) 날짜의 데이터가 없습니다 (0건).` : `ℹ️ PostgreSQL bazasida (${result.target_date || rangeLabel}) sanalari bo'yicha ma'lumot topilmadi (0 ta yozuv).`, "info");
         } else if (dryRun) {
-          appendLog(`✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${totalPg} | Transformed: ${transformed} | Unmapped: ${unmapped}`, "success");
+          appendLog(isKo ? `✅ Dry-Run 결과 (${result.target_date}): 총 PG: ${totalPg}건 | 변환완료: ${transformed}건 | 미매핑: ${unmapped}건` : `✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${totalPg} | Transformed: ${transformed} | Unmapped: ${unmapped}`, "success");
         } else {
-          appendLog(`🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
+          appendLog(isKo ? `🚀 실제 동기화 결과 (${result.target_date}): 총 PG: ${totalPg}건 | 저장됨: ${inserted}건 | 중복 제외: ${dupes}건` : `🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
           fetchStatus();
         }
         if (result.missing_stations && result.missing_stations.length > 0) {
-          appendLog("⚠️ Topilmagan stansiyalar: " + result.missing_stations.join(", "), "warn");
+          appendLog((isKo ? "⚠️ 미매핑 충전소: " : "⚠️ Topilmagan stansiyalar: ") + result.missing_stations.join(", "), "warn");
         }
       } else {
-        appendLog(`⚠️ Daily sync natijasi (${result.target_date || rangeLabel}): ${result.message || 'Xatolik yuz berdi'}`, "error");
+        appendLog((isKo ? "⚠️ 동기화 실패: " : "⚠️ Daily sync natijasi: ") + (result.message || 'Error occurred'), "error");
       }
     } catch (err) {
-      appendLog("Daily sync server xatoligi: " + err.message, "error");
+      appendLog((isKo ? "서버 오류: " : "Daily sync server xatoligi: ") + err.message, "error");
     }
   }
 

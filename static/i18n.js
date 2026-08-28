@@ -72,6 +72,27 @@ const translations = {
     btn_select_table: "📋 Select Table",
     btn_auto_detect: "⚡ Auto-Detect",
 
+    // Column Mapping Labels (PG)
+    label_station_name_col: "Stansiya Nomi Ustuni (Station Name)",
+    label_charger_name_col: "Zaryadlovchi Nomi Ustuni (Charger Name)",
+    label_begin_time_col: "Boshlanish Vaqti Ustuni (Begin Time)",
+    label_end_time_col: "Tugash Vaqti Ustuni (End Time)",
+    label_power_kwh_col: "Quvvat (kWh) Ustuni",
+    label_price_won_col: "Narx (Won) Ustuni",
+    label_card_no_col: "Karta Raqami Ustuni (Card No)",
+    label_pay_type_col: "To'lov Turi Ustuni (Pay Type)",
+
+    // Column Mapping Labels (MariaDB)
+    label_maria_target_table_name: "MariaDB Nishon Jadval Nomi",
+    label_maria_begin_col: "Boshlanish Ustuni (Begin Column)",
+    label_maria_end_col: "Tugash Ustuni (End Column)",
+    label_maria_power_col: "Quvvat Ustuni (Power Column)",
+    label_maria_price_col: "Narx Ustuni (Price Column)",
+    label_maria_card_col: "Karta Raqami Ustuni (Card No Column)",
+    label_maria_cs_id_col: "CS ID Ustuni",
+    label_maria_cp_id_col: "CP ID Ustuni",
+    label_maria_tx_id_col: "Transaction ID Ustuni",
+
     custom_mapping_title: "✨ Qo'shimcha Ustunlar (Custom Dynamic Mappings)",
     custom_mapping_sub: "Istalgancha qo'shimcha ustunlarni 1-click bilan bog'lang (masalan: soc ➔ startSoc)",
     btn_add_custom_mapping: "➕ Qo'shimcha Ustun Qo'shish",
@@ -184,6 +205,27 @@ const translations = {
     btn_select_table: "📋 테이블 선택",
     btn_auto_detect: "⚡ 자동 감지",
 
+    // Column Mapping Labels (PG)
+    label_station_name_col: "충전소 이름 컬럼 (Station Name)",
+    label_charger_name_col: "충전기 이름 컬럼 (Charger Name)",
+    label_begin_time_col: "시작 시간 컬럼 (Begin Time)",
+    label_end_time_col: "종료 시간 컬럼 (End Time)",
+    label_power_kwh_col: "전력량 컬럼 (Power kWh)",
+    label_price_won_col: "금액 컬럼 (Price Won)",
+    label_card_no_col: "카드 번호 컬럼 (Card No)",
+    label_pay_type_col: "결제 타입 컬럼 (Pay Type)",
+
+    // Column Mapping Labels (MariaDB)
+    label_maria_target_table_name: "MariaDB 대상 테이블 이름",
+    label_maria_begin_col: "시작 시간 컬럼 (Begin Column)",
+    label_maria_end_col: "종료 시간 컬럼 (End Column)",
+    label_maria_power_col: "전력량 컬럼 (Power Column)",
+    label_maria_price_col: "금액 컬럼 (Price Column)",
+    label_maria_card_col: "카드 번호 컬럼 (Card No Column)",
+    label_maria_cs_id_col: "충전소 ID 컬럼 (CS ID Column)",
+    label_maria_cp_id_col: "충전기 ID 컬럼 (CP ID Column)",
+    label_maria_tx_id_col: "트랜잭션 ID 컬럼 (Transaction ID Column)",
+
     custom_mapping_title: "✨ 추가 컬럼 동적 매핑 (Custom Dynamic Mappings)",
     custom_mapping_sub: "원하는 추가 컬럼을 자유롭게 1-클릭으로 매핑하세요 (예: soc ➔ startSoc)",
     btn_add_custom_mapping: "➕ 추가 컬럼 매핑 추가",
@@ -237,7 +279,7 @@ function setLanguage(lang) {
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (translations[lang] && translations[lang][key]) {
-      el.textContent = translations[lang][key];
+      el.innerHTML = translations[lang][key];
     }
   });
 
