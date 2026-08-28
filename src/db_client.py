@@ -144,6 +144,24 @@ class MariaDBClient:
         finally:
             conn.close()
 
+    def get_table_columns(self, table_name):
+        """Fetch list of column names and types for a MariaDB table."""
+        table_name = table_name.strip().replace("`", "")
+        conn = self.get_connection()
+        if not conn:
+            return []
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(f"SHOW COLUMNS FROM `{table_name}`;")
+                rows = cursor.fetchall()
+                cols = [{"column_name": r['Field'], "data_type": r['Type']} for r in rows if 'Field' in r]
+                return cols
+        except Exception as e:
+            logger.error(f"Error fetching columns for MariaDB table `{table_name}`: {e}")
+            return []
+        finally:
+            conn.close()
+
     def verify_target_schema(self, table_name=None):
         """Verify table existence and inspect column names in MariaDB."""
         if not table_name:

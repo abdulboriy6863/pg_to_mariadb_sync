@@ -177,6 +177,12 @@ def get_mariadb_tables():
     tables = db_client.get_tables()
     return {"status": "success", "tables": tables}
 
+@app.get("/api/mariadb-table-columns/{table_name}")
+def get_mariadb_table_columns(table_name: str):
+    db_client = MariaDBClient()
+    cols = db_client.get_table_columns(table_name)
+    return {"status": "success", "table_name": table_name, "columns": cols}
+
 @app.post("/api/validate-schema")
 def validate_schema():
     db_client = MariaDBClient()

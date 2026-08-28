@@ -941,15 +941,133 @@ document.addEventListener("DOMContentLoaded", () => {
     `).join("");
   }
 
+  async function loadPgTableColumns(tableName) {
+    const table = tableName || document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history";
+    if (!table) return;
+
+    try {
+      const res = await fetch(`/api/pg-table-columns/${encodeURIComponent(table)}`);
+      const data = await res.json();
+      if (data.status === "success" && data.columns && data.columns.length > 0) {
+        const colNames = data.columns.map(c => c.column_name);
+        
+        const dl = document.getElementById("pgColumnsDatalist");
+        if (dl) {
+          dl.innerHTML = colNames.map(c => `<option value="${c}"></option>`).join("");
+        }
+
+        autoMatchPgColumns(colNames);
+        appendLog(`🐘 PostgreSQL (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
+      }
+    } catch (e) {
+      console.warn("PG columns fetch error:", e);
+    }
+  }
+
+  function autoMatchPgColumns(columns) {
+    function findBest(keywords, defaultVal, currentVal) {
+      if (currentVal && columns.includes(currentVal)) return currentVal;
+      for (const kw of keywords) {
+        const found = columns.find(c => c.toLowerCase().includes(kw));
+        if (found) return found;
+      }
+      return defaultVal;
+    }
+
+    const stInput = document.getElementById("mapPgStationCol");
+    if (stInput) stInput.value = findBest(["station", "cs_name", "biz"], "station_name", stInput.value);
+
+    const cpInput = document.getElementById("mapPgChargerCol");
+    if (cpInput) cpInput.value = findBest(["charger", "cp_name", "cp"], "charger_name", cpInput.value);
+
+    const bgInput = document.getElementById("mapPgBeginCol");
+    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin_time", bgInput.value);
+
+    const edInput = document.getElementById("mapPgEndCol");
+    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end_time", edInput.value);
+
+    const pwInput = document.getElementById("mapPgPowerCol");
+    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power_kwh", pwInput.value);
+
+    const prInput = document.getElementById("mapPgPriceCol");
+    if (prInput) prInput.value = findBest(["price", "won", "amount", "total", "cost"], "price_won", prInput.value);
+
+    const cdInput = document.getElementById("mapPgCardCol");
+    if (cdInput) cdInput.value = findBest(["card", "cardno"], "card_no", cdInput.value);
+
+    const pyInput = document.getElementById("mapPgPayCol");
+    if (pyInput) pyInput.value = findBest(["pay", "type", "roaming"], "pay_type", pyInput.value);
+  }
+
+  async function loadMariaTableColumns(tableName) {
+    const table = tableName || document.getElementById("mapMariaTable")?.value || "TCSP_CHARGE_HIST";
+    if (!table) return;
+
+    try {
+      const res = await fetch(`/api/mariadb-table-columns/${encodeURIComponent(table)}`);
+      const data = await res.json();
+      if (data.status === "success" && data.columns && data.columns.length > 0) {
+        const colNames = data.columns.map(c => c.column_name);
+
+        const dl = document.getElementById("mariaColumnsDatalist");
+        if (dl) {
+          dl.innerHTML = colNames.map(c => `<option value="${c}"></option>`).join("");
+        }
+
+        autoMatchMariaColumns(colNames);
+        appendLog(`🐬 MariaDB (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
+      }
+    } catch (e) {
+      console.warn("MariaDB columns fetch error:", e);
+    }
+  }
+
+  function autoMatchMariaColumns(columns) {
+    function findBest(keywords, defaultVal, currentVal) {
+      if (currentVal && columns.includes(currentVal)) return currentVal;
+      for (const kw of keywords) {
+        const found = columns.find(c => c.toLowerCase().includes(kw));
+        if (found) return found;
+      }
+      return defaultVal;
+    }
+
+    const bgInput = document.getElementById("mapMariaBeginCol");
+    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin", bgInput.value);
+
+    const edInput = document.getElementById("mapMariaEndCol");
+    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end", edInput.value);
+
+    const pwInput = document.getElementById("mapMariaPowerCol");
+    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power", pwInput.value);
+
+    const prInput = document.getElementById("mapMariaPriceCol");
+    if (prInput) prInput.value = findBest(["totalprice", "price", "amount", "cost", "won"], "totalPrice", prInput.value);
+
+    const cdInput = document.getElementById("mapMariaCardCol");
+    if (cdInput) cdInput.value = findBest(["cardno", "card"], "cardNo", cdInput.value);
+
+    const csInput = document.getElementById("mapMariaCsIdCol");
+    if (csInput) csInput.value = findBest(["csid", "cs_id"], "csId", csInput.value);
+
+    const cpInput = document.getElementById("mapMariaCpIdCol");
+    if (cpInput) cpInput.value = findBest(["cpid", "cp_id"], "cpId", cpInput.value);
+
+    const txInput = document.getElementById("mapMariaTxIdCol");
+    if (txInput) txInput.value = findBest(["transactionid", "txid", "tx_id"], "transactionId", txInput.value);
+  }
+
   function selectSelectorTable(tableName, dbType) {
     if (dbType === "postgres") {
       const el1 = document.getElementById("pgTableName");
       const el2 = document.getElementById("mapPgTable");
       if (el1) el1.value = tableName;
       if (el2) el2.value = tableName;
+      loadPgTableColumns(tableName);
     } else {
       const el = document.getElementById("mapMariaTable");
       if (el) el.value = tableName;
+      loadMariaTableColumns(tableName);
     }
     closeTableSelectorModal();
     appendLog(`Jadval tanlandi: ${tableName}`, "success");
@@ -972,6 +1090,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.validateSchema = validateSchema;
+  window.loadPgTableColumns = loadPgTableColumns;
+  window.loadMariaTableColumns = loadMariaTableColumns;
   window.openTableSelectorModal = openTableSelectorModal;
   window.selectSelectorTable = selectSelectorTable;
   window.closeTableSelectorModal = closeTableSelectorModal;
