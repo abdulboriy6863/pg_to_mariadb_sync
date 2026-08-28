@@ -65,8 +65,16 @@ class LookupService:
         """Refresh station and charger mappings from MariaDB on demand."""
         self.load_mappings()
 
+    def _strip_noise(self, text: str) -> str:
+        if not text:
+            return ""
+        text = re.sub(r'\([^)]*\)', ' ', str(text))
+        text = re.sub(r'주식회사|지솔라|\(주\)|비공용|사택|테스트|본사', ' ', text)
+        text = re.sub(r'[^\w]', '', text)
+        return text.strip()
+
     def get_cs_id(self, station_name: str) -> int:
-        """Resolve station name to numeric csId with strict and safe matching."""
+        """Resolve station name to numeric csId with strict and safe multi-stage matching."""
         if not station_name:
             return None
         cleaned = self._normalize(station_name)
@@ -75,7 +83,15 @@ class LookupService:
         if cleaned in self.normalized_station_map:
             return self.normalized_station_map[cleaned]
 
-        # 2. Prefix or substring match with safety length constraints
+        # 2. Cleaned match without spaces, parentheses, or corporate noise
+        clean_st = self._strip_noise(station_name)
+        if clean_st:
+            for name, cs_id in self.station_map.items():
+                clean_m = self._strip_noise(name)
+                if clean_m and (clean_st == clean_m or (len(clean_st) >= 4 and clean_st in clean_m) or (len(clean_m) >= 4 and clean_m in clean_st)):
+                    return cs_id
+
+        # 3. Substring / prefix match
         for name, cs_id in self.normalized_station_map.items():
             if not name:
                 continue
@@ -87,6 +103,17 @@ class LookupService:
                 max_len = max(len(name), len(cleaned))
                 if min_len >= 3 and (min_len / max_len) >= 0.5:
                     return cs_id
+
+        # 4. Tokenized specific keyword match (e.g. "진보전력", "롯데택배", "GEVR", "이화마을", "제주오성", "스타세븐", "양현중")
+        tokens = [t for t in re.split(r'[^\w]', station_name) if len(t) >= 2 and t not in ['주식회사', '지솔라', '비공용', '사택']]
+        tokens.sort(key=len, reverse=True)
+        for token in tokens:
+            clean_tok = self._strip_noise(token)
+            if len(clean_tok) >= 2:
+                for name, cs_id in self.station_map.items():
+                    clean_m = self._strip_noise(name)
+                    if clean_tok in clean_m:
+                        return cs_id
 
         return None
 
