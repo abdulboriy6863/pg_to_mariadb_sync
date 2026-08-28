@@ -396,18 +396,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fullConfig = {
       postgresql: {
-        host: (document.getElementById("pgHost")?.value || "127.0.0.1").trim(),
+        host: (document.getElementById("pgHost")?.value || "").trim(),
         port: parseInt(document.getElementById("pgPort")?.value) || 5432,
-        database: (document.getElementById("pgDatabase")?.value || "old_charging_db").trim(),
-        table_name: (document.getElementById("pgTableName")?.value || "charging_history").trim(),
-        user: (document.getElementById("pgUser")?.value || "postgres").trim(),
+        database: (document.getElementById("pgDatabase")?.value || "").trim(),
+        table_name: (document.getElementById("pgTableName")?.value || "").trim(),
+        user: (document.getElementById("pgUser")?.value || "").trim(),
         password: document.getElementById("pgPassword")?.value || ""
       },
       mariadb: {
-        host: (document.getElementById("mariaHost")?.value || "192.168.0.28").trim(),
+        host: (document.getElementById("mariaHost")?.value || "").trim(),
         port: parseInt(document.getElementById("mariaPort")?.value) || 3306,
-        database: (document.getElementById("mariaDatabase")?.value || "blue_networks").trim(),
-        user: (document.getElementById("mariaUser")?.value || "blue_networks").trim(),
+        database: (document.getElementById("mariaDatabase")?.value || "").trim(),
+        user: (document.getElementById("mariaUser")?.value || "").trim(),
         password: document.getElementById("mariaPassword")?.value || "",
         connect_timeout: 5
       },

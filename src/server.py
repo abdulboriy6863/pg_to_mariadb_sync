@@ -120,8 +120,17 @@ def save_config(config_data: dict = Body(...)):
 
         for section in ["mariadb", "postgresql"]:
             if section in config_data:
-                if config_data[section].get("password") == "******":
-                    config_data[section]["password"] = existing_cfg.get(section, {}).get("password", "")
+                ex_sec = existing_cfg.get(section, {})
+                cur_sec = config_data[section]
+                if cur_sec.get("password") == "******" or not cur_sec.get("password"):
+                    if ex_sec.get("password"):
+                        cur_sec["password"] = ex_sec.get("password")
+                if not cur_sec.get("host") and ex_sec.get("host"):
+                    cur_sec["host"] = ex_sec.get("host")
+                if not cur_sec.get("database") and ex_sec.get("database"):
+                    cur_sec["database"] = ex_sec.get("database")
+                if not cur_sec.get("user") and ex_sec.get("user"):
+                    cur_sec["user"] = ex_sec.get("user")
 
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=2, ensure_ascii=False)
