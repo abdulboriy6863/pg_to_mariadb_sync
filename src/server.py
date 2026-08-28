@@ -397,17 +397,49 @@ def get_schema_preview_sample():
         }
 
     lookup_service = LookupService(db_client)
-    st_val = sample_row.get(st_col, "")
-    cp_val = sample_row.get(cp_col, "")
+
+    def find_val(cols_to_try):
+        for c in cols_to_try:
+            if c in sample_row and sample_row[c] is not None:
+                return c, sample_row[c]
+        return cols_to_try[0] if cols_to_try else "", ""
+
+    actual_st_col, st_val = find_val([st_col, "station_name", "station_id", "station"])
+    actual_cp_col, cp_val = find_val([cp_col, "charger_name", "charger_no", "charger_id", "charger"])
+
+    if "start_date" in sample_row and "start_time" in sample_row:
+        begin_str = f"{sample_row['start_date']} {sample_row['start_time']}"
+        actual_begin_col = "start_date + start_time"
+    else:
+        actual_begin_col, raw_begin_val = find_val([begin_col, "begin_time", "start_time", "begin"])
+        begin_str = str(raw_begin_val or "")
+
+    if "end_date" in sample_row and "end_time" in sample_row:
+        end_str = f"{sample_row['end_date']} {sample_row['end_time']}"
+        actual_end_col = "end_date + end_time"
+    else:
+        actual_end_col, raw_end_val = find_val([end_col, "end_time", "stop_time", "end"])
+        end_str = str(raw_end_val or "")
+
+    actual_power_col, raw_power = find_val([power_col, "power_kwh", "use_power", "power", "kwh"])
+    try:
+        power_num = float(raw_power or 0)
+        if power_num > 5000:
+            power_num = round(power_num / 1000.0, 2)
+    except (ValueError, TypeError):
+        power_num = 0.0
+
+    actual_price_col, raw_price = find_val([price_col, "price_won", "use_payment", "totalPrice", "price"])
+    try:
+        price_num = int(float(raw_price or 0))
+    except (ValueError, TypeError):
+        price_num = 0
+
+    actual_card_col, card_val = find_val([card_col, "card_no", "cardNo", "card"])
+    actual_pay_col, pay_val = find_val([pay_col, "pay_type", "roamingType", "pay_mode"])
+
     cs_id = lookup_service.get_cs_id(st_val) if st_val else None
     cp_id = lookup_service.get_cp_id(cs_id, cp_val) if (cs_id and cp_val) else None
-
-    begin_str = str(sample_row.get(begin_col, ""))
-    end_str = str(sample_row.get(end_col, ""))
-    power_val = sample_row.get(power_col, 0)
-    price_val = sample_row.get(price_col, 0)
-    card_val = sample_row.get(card_col, "")
-    pay_val = sample_row.get(pay_col, "")
 
     raw_hash = f"{cs_id or 'CS_NULL'}_{cp_id or 'CP_NULL'}_{begin_str}"
     h = int(hashlib.md5(raw_hash.encode('utf-8')).hexdigest()[:12], 16)
@@ -425,7 +457,7 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "Station -> CS ID",
-            "pg_col": st_col,
+            "pg_col": actual_st_col,
             "pg_val": str(st_val),
             "maria_col": m_cs_col,
             "maria_val": str(cs_id or "(Topilmadi)"),
@@ -434,7 +466,7 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "Charger -> CP ID",
-            "pg_col": cp_col,
+            "pg_col": actual_cp_col,
             "pg_val": str(cp_val),
             "maria_col": m_cp_col,
             "maria_val": str(cp_id or "(Topilmadi)"),
@@ -443,7 +475,7 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "Begin Time",
-            "pg_col": begin_col,
+            "pg_col": actual_begin_col,
             "pg_val": begin_str,
             "maria_col": m_begin_col,
             "maria_val": begin_str,
@@ -452,7 +484,7 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "End Time",
-            "pg_col": end_col,
+            "pg_col": actual_end_col,
             "pg_val": end_str,
             "maria_col": m_end_col,
             "maria_val": end_str,
@@ -461,25 +493,25 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "Power (kWh)",
-            "pg_col": power_col,
-            "pg_val": str(power_val),
+            "pg_col": actual_power_col,
+            "pg_val": str(raw_power),
             "maria_col": m_power_col,
-            "maria_val": f"{float(power_val):.2f}" if power_val is not None else "0.00",
+            "maria_val": f"{power_num:.2f}",
             "status": "mapped",
-            "badge_text": "✅ FLOAT"
+            "badge_text": "✅ FLOAT (kWh)"
         },
         {
             "field_label": "Price (Won)",
-            "pg_col": price_col,
-            "pg_val": str(price_val),
+            "pg_col": actual_price_col,
+            "pg_val": str(raw_price),
             "maria_col": m_price_col,
-            "maria_val": str(int(float(price_val))) if price_val is not None else "0",
+            "maria_val": str(price_num),
             "status": "mapped",
-            "badge_text": "✅ INT"
+            "badge_text": "✅ INT (WON)"
         },
         {
             "field_label": "Card No",
-            "pg_col": card_col,
+            "pg_col": actual_card_col,
             "pg_val": str(card_val),
             "maria_col": m_card_col,
             "maria_val": str(card_val),
@@ -488,7 +520,7 @@ def get_schema_preview_sample():
         },
         {
             "field_label": "Pay / Roaming Type",
-            "pg_col": pay_col,
+            "pg_col": actual_pay_col,
             "pg_val": str(pay_val),
             "maria_col": "roamingType",
             "maria_val": str(pay_val),

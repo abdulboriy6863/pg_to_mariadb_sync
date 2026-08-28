@@ -13,13 +13,13 @@
     "transaction_id_col": "transactionId"
   },
   "pg_schema_mapping": {
-    "table_name": "charging_history",
-    "station_name_col": "station_name",
-    "charger_name_col": "charger_name",
-    "begin_time_col": "begin_time",
+    "table_name": "using_history",
+    "station_name_col": "station_id",
+    "charger_name_col": "charger_no",
+    "begin_time_col": "start_time",
     "end_time_col": "end_time",
-    "power_kwh_col": "power_kwh",
-    "price_won_col": "price_won",
+    "power_kwh_col": "use_power",
+    "price_won_col": "use_payment",
     "card_no_col": "card_no",
     "pay_type_col": "pay_type"
   }
