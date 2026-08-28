@@ -166,9 +166,21 @@ class DailySyncer:
                 for row in cursor.fetchall():
                     pg_records.append(dict(zip(columns, row)))
             except Exception as e:
-                logger.warning(f"Error querying PostgreSQL database: {e}")
-            finally:
-                conn.close()
+                logger.error(f"Error querying PostgreSQL database: {e}")
+                err_msg = f"PostgreSQL SQL So'rov Xatoligi: {e}"
+                update_global_progress(is_running=False, status="error", message=err_msg)
+                return {
+                    "status": "error",
+                    "target_date": date_summary_str,
+                    "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "message": err_msg,
+                    "total_pg_records": 0,
+                    "inserted": 0,
+                    "duplicates_skipped": 0,
+                    "transformed_count": 0,
+                    "unmapped_count": 0,
+                    "count": 0
+                }
         else:
             logger.warning("PostgreSQL connection unavailable. Daily sync cannot proceed without PG connection.")
             err_msg = "PostgreSQL connection offline. Please check DB credentials."
