@@ -967,6 +967,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         autoMatchPgColumns(colNames);
+        
+        const pgBox = document.getElementById("pgSchemaValidationResult");
+        if (pgBox) {
+          pgBox.style.display = "block";
+          pgBox.style.background = "rgba(56, 189, 248, 0.15)";
+          pgBox.style.color = "#38bdf8";
+          pgBox.style.border = "1px solid rgba(56, 189, 248, 0.3)";
+          pgBox.innerHTML = `<div><strong>🐘 PostgreSQL (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div><div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+        }
+
         appendLog(`🐘 PostgreSQL (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
       }
     } catch (e) {
@@ -975,38 +985,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function autoMatchPgColumns(columns) {
-    function findBest(keywords, defaultVal, currentVal) {
-      if (currentVal && columns.includes(currentVal)) return currentVal;
+    function findBest(keywords, defaultVal) {
       for (const kw of keywords) {
         const found = columns.find(c => c.toLowerCase().includes(kw));
         if (found) return found;
       }
-      return defaultVal;
+      if (columns.includes(defaultVal)) return defaultVal;
+      return "";
     }
 
     const stInput = document.getElementById("mapPgStationCol");
-    if (stInput) stInput.value = findBest(["station", "cs_name", "biz"], "station_name", stInput.value);
+    if (stInput) stInput.value = findBest(["station", "cs_name", "biz"], "station_name");
 
     const cpInput = document.getElementById("mapPgChargerCol");
-    if (cpInput) cpInput.value = findBest(["charger", "cp_name", "cp"], "charger_name", cpInput.value);
+    if (cpInput) cpInput.value = findBest(["charger", "cp_name", "cp"], "charger_name");
 
     const bgInput = document.getElementById("mapPgBeginCol");
-    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin_time", bgInput.value);
+    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin_time");
 
     const edInput = document.getElementById("mapPgEndCol");
-    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end_time", edInput.value);
+    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end_time");
 
     const pwInput = document.getElementById("mapPgPowerCol");
-    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power_kwh", pwInput.value);
+    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power_kwh");
 
     const prInput = document.getElementById("mapPgPriceCol");
-    if (prInput) prInput.value = findBest(["price", "won", "amount", "total", "cost"], "price_won", prInput.value);
+    if (prInput) prInput.value = findBest(["price", "won", "amount", "total", "cost"], "price_won");
 
     const cdInput = document.getElementById("mapPgCardCol");
-    if (cdInput) cdInput.value = findBest(["card", "cardno"], "card_no", cdInput.value);
+    if (cdInput) cdInput.value = findBest(["card", "cardno"], "card_no");
 
     const pyInput = document.getElementById("mapPgPayCol");
-    if (pyInput) pyInput.value = findBest(["pay", "type", "roaming"], "pay_type", pyInput.value);
+    if (pyInput) pyInput.value = findBest(["pay", "type", "roaming"], "pay_type");
   }
 
   async function loadMariaTableColumns(tableName) {
@@ -1025,6 +1035,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         autoMatchMariaColumns(colNames);
+
+        const mariaBox = document.getElementById("schemaValidationResult");
+        if (mariaBox) {
+          mariaBox.style.display = "block";
+          mariaBox.style.background = "rgba(52, 211, 153, 0.15)";
+          mariaBox.style.color = "#34d399";
+          mariaBox.style.border = "1px solid rgba(52, 211, 153, 0.3)";
+          mariaBox.innerHTML = `<div><strong>🐬 MariaDB Target (${table}):</strong> ✅ ${colNames.length} ta real ustunlar o'qildi</div><div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">Ustunlar: ${colNames.slice(0, 8).join(', ')}${colNames.length > 8 ? '...' : ''}</div>`;
+        }
+
         appendLog(`🐬 MariaDB (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
       }
     } catch (e) {
@@ -1033,38 +1053,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function autoMatchMariaColumns(columns) {
-    function findBest(keywords, defaultVal, currentVal) {
-      if (currentVal && columns.includes(currentVal)) return currentVal;
+    function findBest(keywords, defaultVal) {
       for (const kw of keywords) {
         const found = columns.find(c => c.toLowerCase().includes(kw));
         if (found) return found;
       }
-      return defaultVal;
+      if (columns.includes(defaultVal)) return defaultVal;
+      return "";
     }
 
     const bgInput = document.getElementById("mapMariaBeginCol");
-    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin", bgInput.value);
+    if (bgInput) bgInput.value = findBest(["begin", "start"], "begin");
 
     const edInput = document.getElementById("mapMariaEndCol");
-    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end", edInput.value);
+    if (edInput) edInput.value = findBest(["end", "finish", "stop"], "end");
 
     const pwInput = document.getElementById("mapMariaPowerCol");
-    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power", pwInput.value);
+    if (pwInput) pwInput.value = findBest(["power", "kwh", "watt", "energy"], "power");
 
     const prInput = document.getElementById("mapMariaPriceCol");
-    if (prInput) prInput.value = findBest(["totalprice", "price", "amount", "cost", "won"], "totalPrice", prInput.value);
+    if (prInput) prInput.value = findBest(["totalprice", "price", "amount", "cost", "won"], "totalPrice");
 
     const cdInput = document.getElementById("mapMariaCardCol");
-    if (cdInput) cdInput.value = findBest(["cardno", "card"], "cardNo", cdInput.value);
+    if (cdInput) cdInput.value = findBest(["cardno", "card"], "cardNo");
 
     const csInput = document.getElementById("mapMariaCsIdCol");
-    if (csInput) csInput.value = findBest(["csid", "cs_id"], "csId", csInput.value);
+    if (csInput) csInput.value = findBest(["csid", "cs_id"], "csId");
 
     const cpInput = document.getElementById("mapMariaCpIdCol");
-    if (cpInput) cpInput.value = findBest(["cpid", "cp_id"], "cpId", cpInput.value);
+    if (cpInput) cpInput.value = findBest(["cpid", "cp_id"], "cpId");
 
     const txInput = document.getElementById("mapMariaTxIdCol");
-    if (txInput) txInput.value = findBest(["transactionid", "txid", "tx_id"], "transactionId", txInput.value);
+    if (txInput) txInput.value = findBest(["transactionid", "txid", "tx_id"], "transactionId");
   }
 
   function selectSelectorTable(tableName, dbType) {
