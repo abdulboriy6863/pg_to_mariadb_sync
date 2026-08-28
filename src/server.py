@@ -171,6 +171,72 @@ def get_pg_table_columns(table_name: str):
     cols = pg_client.get_table_columns(table_name)
     return {"status": "success", "table_name": table_name, "columns": cols}
 
+@app.get("/api/mariadb-tables")
+def get_mariadb_tables():
+    db_client = MariaDBClient()
+    tables = db_client.get_tables()
+    return {"status": "success", "tables": tables}
+
+@app.post("/api/validate-schema")
+def validate_schema():
+    db_client = MariaDBClient()
+    pg_client = PostgreSQLClient()
+    
+    target_mapping = db_client.get_target_mapping()
+    raw_table = target_mapping["raw_table_name"]
+    
+    mariadb_schema = db_client.verify_target_schema(raw_table)
+    
+    req_target_cols = [
+        target_mapping.get("transaction_id_col", "transactionId"),
+        target_mapping.get("cs_id_col", "csId"),
+        target_mapping.get("cp_id_col", "cpId"),
+        target_mapping.get("begin_col", "begin"),
+        target_mapping.get("end_col", "end"),
+        target_mapping.get("power_col", "power"),
+        target_mapping.get("price_col", "totalPrice"),
+        target_mapping.get("card_no_col", "cardNo")
+    ]
+    
+    target_matched_cols = []
+    target_missing_cols = []
+    if mariadb_schema["exists"]:
+        existing_cols = mariadb_schema["columns"]
+        for col in req_target_cols:
+            if col in existing_cols:
+                target_matched_cols.append(col)
+            else:
+                target_missing_cols.append(col)
+
+    pg_status = pg_client.test_connection()
+    pg_table_ok = False
+    if pg_status.get("status") == "success":
+        try:
+            with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
+                rules = json.load(f)
+                pg_mapping = rules.get("pg_schema_mapping", {})
+                pg_table = pg_mapping.get("table_name", "charging_history")
+                pg_cols = pg_client.get_table_columns(pg_table)
+                pg_table_ok = len(pg_cols) > 0
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "mariadb": {
+            "table_name": raw_table,
+            "exists": mariadb_schema["exists"],
+            "matched_cols_count": len(target_matched_cols),
+            "total_req_cols": len(req_target_cols),
+            "missing_cols": target_missing_cols,
+            "message": mariadb_schema["message"]
+        },
+        "postgres": {
+            "connected": pg_status.get("status") == "success",
+            "table_ok": pg_table_ok
+        }
+    }
+
 @app.post("/api/test-mariadb")
 def test_mariadb(config_data: dict = Body(None)):
     try:

@@ -274,18 +274,28 @@ class DailySyncer:
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)
             tx_id = -(1000000 + (h % 899999999999))
 
+            target_mapping = self.mariadb_client.get_target_mapping()
+            tx_col = target_mapping.get("transaction_id_col", "transactionId")
+            cs_col = target_mapping.get("cs_id_col", "csId")
+            cp_col = target_mapping.get("cp_id_col", "cpId")
+            begin_col = target_mapping.get("begin_col", "begin")
+            end_col = target_mapping.get("end_col", "end")
+            power_col = target_mapping.get("power_col", "power")
+            price_col = target_mapping.get("price_col", "totalPrice")
+            card_col = target_mapping.get("card_no_col", "cardNo")
+
             transformed.append({
-                "transactionId": tx_id,
-                "csId": cs_id,
-                "cpId": cp_id,
+                tx_col: tx_id,
+                cs_col: cs_id,
+                cp_col: cp_id,
                 "modelId": 0,
                 "connectorId": 1,
-                "begin": begin_str,
-                "end": end_str,
-                "power": float(r.get("power_kwh", 0)),
+                begin_col: begin_str,
+                end_col: end_str,
+                power_col: float(r.get("power_kwh", 0)),
                 "powerUnit": "kWh",
-                "totalPrice": int(float(r.get("price_won", 0))),
-                "cardNo": str(r.get("card_no", "")),
+                price_col: int(float(r.get("price_won", 0))),
+                card_col: str(r.get("card_no", "")),
                 "roamingType": str(r.get("pay_type", "")),
                 "startSoc": 0,
                 "soc": 0

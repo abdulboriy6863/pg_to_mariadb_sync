@@ -114,18 +114,28 @@ class CSVImporter:
 
                 tx_id = _gen_tx_id(cs_id, cp_id, begin_fmt)
 
+                target_mapping = self.db_client.get_target_mapping()
+                tx_col = target_mapping.get("transaction_id_col", "transactionId")
+                cs_col = target_mapping.get("cs_id_col", "csId")
+                cp_col = target_mapping.get("cp_id_col", "cpId")
+                begin_col = target_mapping.get("begin_col", "begin")
+                end_col = target_mapping.get("end_col", "end")
+                power_col = target_mapping.get("power_col", "power")
+                price_col = target_mapping.get("price_col", "totalPrice")
+                card_col = target_mapping.get("card_no_col", "cardNo")
+
                 record = {
-                    "transactionId": tx_id,
-                    "csId": cs_id,
-                    "cpId": cp_id,
+                    tx_col: tx_id,
+                    cs_col: cs_id,
+                    cp_col: cp_id,
                     "modelId": req_defaults.get("modelId", 0),
                     "connectorId": req_defaults.get("connectorId", 1),
-                    "begin": begin_fmt,
-                    "end": end_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                    "power": power_val,
+                    begin_col: begin_fmt,
+                    end_col: end_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    power_col: power_val,
                     "powerUnit": req_defaults.get("powerUnit", "kWh"),
-                    "totalPrice": price_val,
-                    "cardNo": row.get("카드번호", "").strip(),
+                    price_col: price_val,
+                    card_col: row.get("카드번호", "").strip(),
                     "startSoc": start_soc,
                     "soc": finish_soc,
                     "roamingType": row.get("결제종류", "").strip()

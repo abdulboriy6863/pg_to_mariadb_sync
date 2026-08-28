@@ -1,5 +1,16 @@
 {
   "target_table": "TCSP_CHARGE_HIST",
+  "mariadb_target_mapping": {
+    "table_name": "TCSP_CHARGE_HIST",
+    "begin_col": "begin",
+    "end_col": "end",
+    "power_col": "power",
+    "price_col": "totalPrice",
+    "card_no_col": "cardNo",
+    "cs_id_col": "csId",
+    "cp_id_col": "cpId",
+    "transaction_id_col": "transactionId"
+  },
   "pg_schema_mapping": {
     "table_name": "charging_history",
     "station_name_col": "station_name",

@@ -113,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const mapRes = await fetch("/api/mapping-config");
         const mapCfg = await mapRes.json();
         const pgSchema = mapCfg.pg_schema_mapping || {};
+        const mariaTarget = mapCfg.mariadb_target_mapping || {};
 
         if (document.getElementById("mapPgTable")) document.getElementById("mapPgTable").value = pgSchema.table_name || pg.table_name || "charging_history";
         if (document.getElementById("mapPgStationCol")) document.getElementById("mapPgStationCol").value = pgSchema.station_name_col || "station_name";
@@ -123,7 +124,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("mapPgPriceCol")) document.getElementById("mapPgPriceCol").value = pgSchema.price_won_col || "price_won";
         if (document.getElementById("mapPgCardCol")) document.getElementById("mapPgCardCol").value = pgSchema.card_no_col || "card_no";
         if (document.getElementById("mapPgPayCol")) document.getElementById("mapPgPayCol").value = pgSchema.pay_type_col || "pay_type";
-        if (document.getElementById("mapMariaTable")) document.getElementById("mapMariaTable").value = mapCfg.target_table || "TCSP_CHARGE_HIST";
+        
+        if (document.getElementById("mapMariaTable")) document.getElementById("mapMariaTable").value = mariaTarget.table_name || mapCfg.target_table || "TCSP_CHARGE_HIST";
+        if (document.getElementById("mapMariaBeginCol")) document.getElementById("mapMariaBeginCol").value = mariaTarget.begin_col || "begin";
+        if (document.getElementById("mapMariaEndCol")) document.getElementById("mapMariaEndCol").value = mariaTarget.end_col || "end";
+        if (document.getElementById("mapMariaPowerCol")) document.getElementById("mapMariaPowerCol").value = mariaTarget.power_col || "power";
+        if (document.getElementById("mapMariaPriceCol")) document.getElementById("mapMariaPriceCol").value = mariaTarget.price_col || "totalPrice";
+        if (document.getElementById("mapMariaCardCol")) document.getElementById("mapMariaCardCol").value = mariaTarget.card_no_col || "cardNo";
+        if (document.getElementById("mapMariaCsIdCol")) document.getElementById("mapMariaCsIdCol").value = mariaTarget.cs_id_col || "csId";
+        if (document.getElementById("mapMariaCpIdCol")) document.getElementById("mapMariaCpIdCol").value = mariaTarget.cp_id_col || "cpId";
+        if (document.getElementById("mapMariaTxIdCol")) document.getElementById("mapMariaTxIdCol").value = mariaTarget.transaction_id_col || "transactionId";
       } catch (e) {}
     } catch (err) {
       appendLog("Sozlamalarni yuklashda xatolik: " + err.message, "error");
@@ -354,80 +364,100 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save Settings from Modal
-  if (btnSaveSettings) {
-    btnSaveSettings.addEventListener("click", async () => {
+  async function saveSettings(isSilent = false) {
+    if (btnSaveSettings && !isSilent) {
       btnSaveSettings.disabled = true;
       btnSaveSettings.textContent = "⌛ Saqlanmoqda...";
+    }
 
-      const fullConfig = {
-        postgresql: {
-          host: (document.getElementById("pgHost")?.value || "127.0.0.1").trim(),
-          port: parseInt(document.getElementById("pgPort")?.value) || 5432,
-          database: (document.getElementById("pgDatabase")?.value || "old_charging_db").trim(),
-          table_name: (document.getElementById("pgTableName")?.value || "charging_history").trim(),
-          user: (document.getElementById("pgUser")?.value || "postgres").trim(),
-          password: document.getElementById("pgPassword")?.value || ""
-        },
-        mariadb: {
-          host: (document.getElementById("mariaHost")?.value || "192.168.0.28").trim(),
-          port: parseInt(document.getElementById("mariaPort")?.value) || 3306,
-          database: (document.getElementById("mariaDatabase")?.value || "blue_networks").trim(),
-          user: (document.getElementById("mariaUser")?.value || "blue_networks").trim(),
-          password: document.getElementById("mariaPassword")?.value || "",
-          connect_timeout: 5
-        },
-        auto_sync: {
-          enabled: document.getElementById("autoSyncEnabled")?.checked ?? true,
-          hour: intVal(document.getElementById("autoSyncHour")?.value, 2),
-          minute: intVal(document.getElementById("autoSyncMinute")?.value, 0),
-          second: intVal(document.getElementById("autoSyncSecond")?.value, 0)
-        }
-      };
+    const fullConfig = {
+      postgresql: {
+        host: (document.getElementById("pgHost")?.value || "127.0.0.1").trim(),
+        port: parseInt(document.getElementById("pgPort")?.value) || 5432,
+        database: (document.getElementById("pgDatabase")?.value || "old_charging_db").trim(),
+        table_name: (document.getElementById("pgTableName")?.value || "charging_history").trim(),
+        user: (document.getElementById("pgUser")?.value || "postgres").trim(),
+        password: document.getElementById("pgPassword")?.value || ""
+      },
+      mariadb: {
+        host: (document.getElementById("mariaHost")?.value || "192.168.0.28").trim(),
+        port: parseInt(document.getElementById("mariaPort")?.value) || 3306,
+        database: (document.getElementById("mariaDatabase")?.value || "blue_networks").trim(),
+        user: (document.getElementById("mariaUser")?.value || "blue_networks").trim(),
+        password: document.getElementById("mariaPassword")?.value || "",
+        connect_timeout: 5
+      },
+      auto_sync: {
+        enabled: document.getElementById("autoSyncEnabled")?.checked ?? true,
+        hour: intVal(document.getElementById("autoSyncHour")?.value, 2),
+        minute: intVal(document.getElementById("autoSyncMinute")?.value, 0),
+        second: intVal(document.getElementById("autoSyncSecond")?.value, 0)
+      }
+    };
 
-      const mappingConfig = {
-        target_table: (document.getElementById("mapMariaTable")?.value || "TCSP_CHARGE_HIST").trim(),
-        pg_schema_mapping: {
-          table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history").trim(),
-          station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_name").trim(),
-          charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_name").trim(),
-          begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "begin_time").trim(),
-          end_time_col: (document.getElementById("mapPgEndCol")?.value || "end_time").trim(),
-          power_kwh_col: (document.getElementById("mapPgPowerCol")?.value || "power_kwh").trim(),
-          price_won_col: (document.getElementById("mapPgPriceCol")?.value || "price_won").trim(),
-          card_no_col: (document.getElementById("mapPgCardCol")?.value || "card_no").trim(),
-          pay_type_col: (document.getElementById("mapPgPayCol")?.value || "pay_type").trim()
-        }
-      };
+    const targetTable = (document.getElementById("mapMariaTable")?.value || "TCSP_CHARGE_HIST").trim();
+    const mappingConfig = {
+      target_table: targetTable,
+      mariadb_target_mapping: {
+        table_name: targetTable,
+        begin_col: (document.getElementById("mapMariaBeginCol")?.value || "begin").trim(),
+        end_col: (document.getElementById("mapMariaEndCol")?.value || "end").trim(),
+        power_col: (document.getElementById("mapMariaPowerCol")?.value || "power").trim(),
+        price_col: (document.getElementById("mapMariaPriceCol")?.value || "totalPrice").trim(),
+        card_no_col: (document.getElementById("mapMariaCardCol")?.value || "cardNo").trim(),
+        cs_id_col: (document.getElementById("mapMariaCsIdCol")?.value || "csId").trim(),
+        cp_id_col: (document.getElementById("mapMariaCpIdCol")?.value || "cpId").trim(),
+        transaction_id_col: (document.getElementById("mapMariaTxIdCol")?.value || "transactionId").trim()
+      },
+      pg_schema_mapping: {
+        table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history").trim(),
+        station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_name").trim(),
+        charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_name").trim(),
+        begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "begin_time").trim(),
+        end_time_col: (document.getElementById("mapPgEndCol")?.value || "end_time").trim(),
+        power_kwh_col: (document.getElementById("mapPgPowerCol")?.value || "power_kwh").trim(),
+        price_won_col: (document.getElementById("mapPgPriceCol")?.value || "price_won").trim(),
+        card_no_col: (document.getElementById("mapPgCardCol")?.value || "card_no").trim(),
+        pay_type_col: (document.getElementById("mapPgPayCol")?.value || "pay_type").trim()
+      }
+    };
 
-      try {
-        const res = await fetch("/api/config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(fullConfig)
-        });
-        const result = await res.json();
+    try {
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fullConfig)
+      });
+      const result = await res.json();
 
-        await fetch("/api/mapping-config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(mappingConfig)
-        });
+      await fetch("/api/mapping-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mappingConfig)
+      });
 
-        if (res.ok) {
+      if (res.ok) {
+        if (!isSilent) {
           appendLog("Baza, taymer va schema mapping sozlamalari muvaffaqiyatli saqlandi!", "success");
           closeSettingsModal();
           await fetchStatus();
-        } else {
-          alert("Saqlashda xatolik: " + (result.detail || result.message));
         }
-      } catch (err) {
-        alert("Server bilan aloqa uzildi: " + err.message);
-      } finally {
+      } else {
+        if (!isSilent) alert("Saqlashda xatolik: " + (result.detail || result.message));
+      }
+    } catch (err) {
+      if (!isSilent) alert("Server bilan aloqa uzildi: " + err.message);
+    } finally {
+      if (btnSaveSettings && !isSilent) {
         btnSaveSettings.disabled = false;
         btnSaveSettings.textContent = "💾 Sozlamalarni Saqlash";
       }
-    });
+    }
+  }
+
+  // Save Settings from Modal
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener("click", () => saveSettings(false));
   }
 
   function intVal(val, defaultVal) {
@@ -818,5 +848,55 @@ document.addEventListener("DOMContentLoaded", () => {
     logTerminal.appendChild(line);
     logTerminal.scrollTop = logTerminal.scrollHeight;
   }
+  async function validateSchema() {
+    const resBox = document.getElementById("schemaValidationResult");
+    if (resBox) {
+      resBox.style.display = "block";
+      resBox.style.background = "rgba(59, 130, 246, 0.15)";
+      resBox.style.color = "#60a5fa";
+      resBox.style.border = "1px solid rgba(59, 130, 246, 0.3)";
+      resBox.innerHTML = "⏳ Pre-flight schema Validation bajarilmoqda...";
+    }
+
+    try {
+      await saveSettings(true);
+
+      const res = await fetch("/api/validate-schema", { method: "POST" });
+      const data = await res.json();
+
+      if (res.ok && data.status === "success") {
+        const m = data.mariadb;
+        const p = data.postgres;
+        
+        let html = `<div><strong>🐬 MariaDB Table (${m.table_name}):</strong> ${m.exists ? "✅ Mavjud" : "⚠️ Mavjud emas (ko'chirishda avto-yaratiladi)"}</div>`;
+        html += `<div><strong>📊 MariaDB Target Columns:</strong> ${m.matched_cols_count}/${m.total_req_cols} ta ustun mos keldi</div>`;
+        if (m.missing_cols && m.missing_cols.length > 0) {
+          html += `<div style="color: #f87171;">⚠️ Yetishmayotgan target ustunlar: ${m.missing_cols.join(", ")}</div>`;
+        }
+        html += `<div><strong>🐘 PostgreSQL Source:</strong> ${p.connected ? "✅ Ulandi" : "❌ Ulanmadi"} | ${p.table_ok ? "✅ Source Table OK" : "⚠️ Table topilmadi"}</div>`;
+
+        if (resBox) {
+          resBox.style.background = m.exists ? "rgba(52, 211, 153, 0.15)" : "rgba(245, 158, 11, 0.15)";
+          resBox.style.color = m.exists ? "#34d399" : "#fbbf24";
+          resBox.style.border = m.exists ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
+          resBox.innerHTML = html;
+        }
+      } else {
+        if (resBox) {
+          resBox.style.background = "rgba(239, 68, 68, 0.15)";
+          resBox.style.color = "#f87171";
+          resBox.innerHTML = "❌ Validation xatosi: " + (data.detail || "Noma'lum xatolik");
+        }
+      }
+    } catch (e) {
+      if (resBox) {
+        resBox.style.background = "rgba(239, 68, 68, 0.15)";
+        resBox.style.color = "#f87171";
+        resBox.innerHTML = "❌ Xatolik: " + e.message;
+      }
+    }
+  }
+
+  window.validateSchema = validateSchema;
 });
 

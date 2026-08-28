@@ -92,24 +92,149 @@ class MariaDBClient:
         finally:
             conn.close()
 
-    def get_target_table(self):
-        """Fetch target table name from mapping_rules.json, defaulting to TCSP_CHARGE_HIST."""
+    def get_target_mapping(self):
+        """Fetch target table and column mappings from config/mapping_rules.json."""
+        default_mapping = {
+            "table_name": "TCSP_CHARGE_HIST",
+            "begin_col": "begin",
+            "end_col": "end",
+            "power_col": "power",
+            "price_col": "totalPrice",
+            "card_no_col": "cardNo",
+            "cs_id_col": "csId",
+            "cp_id_col": "cpId",
+            "transaction_id_col": "transactionId"
+        }
         try:
             mapping_path = os.path.join(os.path.dirname(__file__), "..", "config", "mapping_rules.json")
             if os.path.exists(mapping_path):
                 with open(mapping_path, "r", encoding="utf-8") as f:
                     rules = json.load(f)
-                    target = rules.get("target_table", "").strip()
-                    if target:
-                        clean_name = target.replace("`", "")
-                        return f"`{clean_name}`"
+                    custom_mapping = rules.get("mariadb_target_mapping", {})
+                    if custom_mapping:
+                        default_mapping.update(custom_mapping)
+                    elif rules.get("target_table"):
+                        default_mapping["table_name"] = rules.get("target_table")
         except Exception as e:
-            logger.warning(f"Failed to read target_table from mapping_rules.json: {e}")
-        return "`TCSP_CHARGE_HIST`"
+            logger.warning(f"Failed to read mariadb_target_mapping: {e}")
+        
+        raw_table = default_mapping.get("table_name", "TCSP_CHARGE_HIST").strip().replace("`", "")
+        default_mapping["raw_table_name"] = raw_table if raw_table else "TCSP_CHARGE_HIST"
+        default_mapping["escaped_table_name"] = f"`{default_mapping['raw_table_name']}`"
+        return default_mapping
+
+    def get_target_table(self):
+        """Fetch escaped target table name for backward compatibility."""
+        return self.get_target_mapping()["escaped_table_name"]
+
+    def get_tables(self):
+        """Fetch list of tables in MariaDB database."""
+        conn = self.get_connection()
+        if not conn:
+            return []
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SHOW TABLES;")
+                rows = cursor.fetchall()
+                tables = [list(r.values())[0] for r in rows if r]
+                return tables
+        except Exception as e:
+            logger.error(f"Error fetching MariaDB tables: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def verify_target_schema(self, table_name=None):
+        """Verify table existence and inspect column names in MariaDB."""
+        if not table_name:
+            table_name = self.get_target_mapping()["raw_table_name"]
+        else:
+            table_name = table_name.strip().replace("`", "")
+            
+        conn = self.get_connection()
+        if not conn:
+            return {"exists": False, "columns": [], "message": "Database connection offline"}
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(f"SHOW COLUMNS FROM `{table_name}`;")
+                rows = cursor.fetchall()
+                columns = [r['Field'] for r in rows if 'Field' in r]
+                return {
+                    "exists": True,
+                    "table_name": table_name,
+                    "columns": columns,
+                    "message": f"Table `{table_name}` exists with {len(columns)} columns"
+                }
+        except Exception as e:
+            return {
+                "exists": False,
+                "table_name": table_name,
+                "columns": [],
+                "message": f"Table `{table_name}` does not exist or error occurred: {e}"
+            }
+        finally:
+            conn.close()
+
+    def create_target_table_if_missing(self, table_name=None):
+        """Create target table if missing in MariaDB."""
+        mapping = self.get_target_mapping()
+        if not table_name:
+            table_name = mapping["raw_table_name"]
+        else:
+            table_name = table_name.strip().replace("`", "")
+
+        conn = self.get_connection()
+        if not conn:
+            return False, "MariaDB connection offline"
+        
+        tx_col = mapping.get("transaction_id_col", "transactionId")
+        cs_col = mapping.get("cs_id_col", "csId")
+        cp_col = mapping.get("cp_id_col", "cpId")
+        begin_col = mapping.get("begin_col", "begin")
+        end_col = mapping.get("end_col", "end")
+        power_col = mapping.get("power_col", "power")
+        price_col = mapping.get("price_col", "totalPrice")
+        card_col = mapping.get("card_no_col", "cardNo")
+
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS `{table_name}` (
+            `{tx_col}` BIGINT(20) NOT NULL PRIMARY KEY,
+            `{cs_col}` INT(11) NOT NULL DEFAULT 0,
+            `{cp_col}` INT(11) NOT NULL DEFAULT 0,
+            `{begin_col}` DATETIME NULL,
+            `{end_col}` DATETIME NULL,
+            `{power_col}` DOUBLE NULL DEFAULT 0,
+            `{price_col}` DOUBLE NULL DEFAULT 0,
+            `{card_col}` VARCHAR(64) NULL,
+            `modelId` INT(11) DEFAULT 0,
+            `connectorId` INT(11) DEFAULT 1,
+            `powerUnit` VARCHAR(16) DEFAULT 'kWh',
+            `startSoc` INT(11) DEFAULT NULL,
+            `soc` INT(11) DEFAULT NULL,
+            `roamingType` VARCHAR(32) DEFAULT NULL,
+            `approvenum` VARCHAR(64) DEFAULT NULL,
+            `carNo` VARCHAR(32) DEFAULT NULL,
+            `userName` VARCHAR(64) DEFAULT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(create_sql)
+                conn.commit()
+                return True, f"Table `{table_name}` created/verified successfully"
+        except Exception as e:
+            logger.error(f"Error creating table `{table_name}`: {e}")
+            return False, f"Failed to create table `{table_name}`: {e}"
+        finally:
+            conn.close()
 
     def get_live_metrics(self):
         """Fetch count of imported/synced records using indexed query for high performance."""
-        target_table = self.get_target_table()
+        mapping = self.get_target_mapping()
+        target_table = mapping["escaped_table_name"]
+        tx_col = f"`{mapping.get('transaction_id_col', 'transactionId')}`"
+        begin_col = f"`{mapping.get('begin_col', 'begin')}`"
+
         conn = self.get_connection()
         if not conn:
             return {
@@ -119,11 +244,11 @@ class MariaDBClient:
         try:
             with conn.cursor() as cursor:
                 # Total tool-imported records (negative transactionId)
-                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE transactionId < 0;")
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE {tx_col} < 0;")
                 total_imported_cnt = cursor.fetchone()['cnt']
 
                 # Today's tool-imported records
-                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE transactionId < 0 AND DATE(begin) = CURDATE();")
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE {tx_col} < 0 AND DATE({begin_col}) = CURDATE();")
                 today_cnt = cursor.fetchone()['cnt']
 
                 return {
@@ -144,7 +269,12 @@ class MariaDBClient:
         if not records:
             return 0, 0
 
-        target_table = self.get_target_table()
+        target_mapping = self.get_target_mapping()
+        target_table = target_mapping["escaped_table_name"]
+        
+        # Ensure table exists before inserting
+        self.create_target_table_if_missing(target_mapping["raw_table_name"])
+
         conn = self.get_connection()
         if not conn:
             logger.warning("MariaDB connection offline. Skipping live DB insert.")
@@ -181,4 +311,5 @@ class MariaDBClient:
             return total_inserted, len(records) - total_inserted
         finally:
             conn.close()
+
 
