@@ -92,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (document.getElementById("pgHost")) document.getElementById("pgHost").value = pg.host || "127.0.0.1";
       if (document.getElementById("pgPort")) document.getElementById("pgPort").value = pg.port || 5432;
       if (document.getElementById("pgDatabase")) document.getElementById("pgDatabase").value = pg.database || "old_charging_db";
+      if (document.getElementById("pgTableName")) document.getElementById("pgTableName").value = pg.table_name || pg.source_table || "charging_history";
       if (document.getElementById("pgUser")) document.getElementById("pgUser").value = pg.user || "postgres";
       if (document.getElementById("pgPassword")) document.getElementById("pgPassword").value = pg.password || "";
 
@@ -259,6 +260,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Fetch PG Tables
+  const btnFetchPgTables = document.getElementById("btnFetchPgTables");
+  if (btnFetchPgTables) {
+    btnFetchPgTables.addEventListener("click", async () => {
+      btnFetchPgTables.disabled = true;
+      btnFetchPgTables.textContent = "⌛ Jadvallar o'qilmoqda...";
+      try {
+        const res = await fetch("/api/pg-tables");
+        const data = await res.json();
+        if (data.status === "success" && data.tables && data.tables.length > 0) {
+          const selected = prompt(`📋 PostgreSQL (${data.tables.length} ta jadval topildi):\n\n` + data.tables.join("\n") + `\n\nManba jadval nomini tanlang:`, data.tables[0]);
+          if (selected) {
+            const pgTableNameInput = document.getElementById("pgTableName");
+            if (pgTableNameInput) pgTableNameInput.value = selected.trim();
+          }
+          appendLog(`📋 PostgreSQL jadvallari (${data.tables.length} ta): ` + data.tables.join(", "), "info");
+        } else {
+          alert("PostgreSQL bazasidan jadvallar o'qilmadi yoki ulanish o'chgan.");
+          appendLog("PostgreSQL bazasidan jadvallar o'qilmadi.", "warn");
+        }
+      } catch (err) {
+        alert("Jadvallarni olishda xatolik: " + err.message);
+      } finally {
+        btnFetchPgTables.disabled = false;
+        btnFetchPgTables.textContent = "📋 PG Jadvallarni Aniqlash";
+      }
+    });
+  }
+
   // Test MariaDB Connection
   if (btnTestMaria) {
     btnTestMaria.addEventListener("click", async () => {
@@ -318,6 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
           host: (document.getElementById("pgHost")?.value || "127.0.0.1").trim(),
           port: parseInt(document.getElementById("pgPort")?.value) || 5432,
           database: (document.getElementById("pgDatabase")?.value || "old_charging_db").trim(),
+          table_name: (document.getElementById("pgTableName")?.value || "charging_history").trim(),
           user: (document.getElementById("pgUser")?.value || "postgres").trim(),
           password: document.getElementById("pgPassword")?.value || ""
         },

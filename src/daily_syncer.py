@@ -134,23 +134,27 @@ class DailySyncer:
         logger.info(f"Initiating Daily Sync for Date(s): {date_summary_str} (dry_run={dry_run})")
         update_global_progress(is_running=True, status="querying_pg", message=f"PostgreSQL dan ({date_summary_str}) ma'lumotlar o'qilmoqda...")
 
+        pg_cfg = self.db_config.get("postgresql", {})
+        pg_table_raw = pg_cfg.get("table_name") or pg_cfg.get("source_table") or "charging_history"
+        pg_table = "".join(c for c in pg_table_raw if c.isalnum() or c == '_') or "charging_history"
+
         pg_records = []
         conn = self.pg_client.get_connection()
         if conn:
             try:
                 cursor = conn.cursor()
                 if is_range_query:
-                    cursor.execute("""
+                    cursor.execute(f"""
                         SELECT station_name, charger_name, begin_time, end_time, 
                                power_kwh, price_won, card_no, pay_type
-                        FROM charging_history
+                        FROM {pg_table}
                         WHERE DATE(begin_time) >= %s AND DATE(begin_time) <= %s
                     """, (start_date, end_date))
                 elif len(target_dates) == 1:
-                    cursor.execute("""
+                    cursor.execute(f"""
                         SELECT station_name, charger_name, begin_time, end_time, 
                                power_kwh, price_won, card_no, pay_type
-                        FROM charging_history
+                        FROM {pg_table}
                         WHERE DATE(begin_time) = %s
                     """, (target_dates[0],))
                 else:
@@ -158,7 +162,7 @@ class DailySyncer:
                     cursor.execute(f"""
                         SELECT station_name, charger_name, begin_time, end_time, 
                                power_kwh, price_won, card_no, pay_type
-                        FROM charging_history
+                        FROM {pg_table}
                         WHERE DATE(begin_time) IN ({placeholders})
                     """, tuple(target_dates))
 

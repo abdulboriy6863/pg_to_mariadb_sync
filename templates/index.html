@@ -176,16 +176,23 @@
               <input type="text" id="pgDatabase" placeholder="old_charging_db">
             </div>
             <div class="form-group">
+              <label>PG Jadval Nomi (Table Name)</label>
+              <input type="text" id="pgTableName" placeholder="charging_history">
+            </div>
+            <div class="form-group">
               <label data-i18n="label_user">사용자 (User)</label>
               <input type="text" id="pgUser" placeholder="postgres">
             </div>
-            <div class="form-group full-width">
+            <div class="form-group">
               <label data-i18n="label_password">비밀번호 (Password)</label>
               <input type="password" id="pgPassword" placeholder="비밀번호 입력" data-i18n-ph="ph_password">
             </div>
           </div>
           <div class="test-result-box" id="pgTestResult"></div>
-          <button id="btnTestPg" class="btn btn-secondary mt-12" data-i18n="btn_test_pg">🔍 PostgreSQL 연결 테스트</button>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button id="btnTestPg" class="btn btn-secondary" style="flex: 1;" data-i18n="btn_test_pg">🔍 PostgreSQL 연결 테스트</button>
+            <button id="btnFetchPgTables" class="btn btn-secondary" style="flex: 1;">📋 PG Jadvallarni Aniqlash</button>
+          </div>
         </div>
 
         <!-- MariaDB Tab -->
@@ -249,7 +256,7 @@
     </div>
   </div>
 
-  <script src="/static/i18n.js?v=20260828_1318"></script>
-  <script src="/static/app.js?v=20260828_1318"></script>
+  <script src="/static/i18n.js?v=20260828_1335"></script>
+  <script src="/static/app.js?v=20260828_1335"></script>
 </body>
 </html>

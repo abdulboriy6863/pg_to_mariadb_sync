@@ -66,3 +66,46 @@ class PostgreSQLClient:
                 "message": str(e),
                 "version": None
             }
+
+    def get_tables(self, config_data=None):
+        conn = self.get_connection(config_data)
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+                ORDER BY table_name;
+            """)
+            tables = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            return tables
+        except Exception as e:
+            logger.error(f"Error fetching PG tables: {e}")
+            if conn:
+                conn.close()
+            return []
+
+    def get_table_columns(self, table_name, config_data=None):
+        conn = self.get_connection(config_data)
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+                ORDER BY ordinal_position;
+            """, (table_name,))
+            cols = [{"column_name": row[0], "data_type": row[1]} for row in cursor.fetchall()]
+            conn.close()
+            return cols
+        except Exception as e:
+            logger.error(f"Error fetching columns for {table_name}: {e}")
+            if conn:
+                conn.close()
+            return []
+

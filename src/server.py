@@ -138,6 +138,18 @@ def test_postgres(config_data: dict = Body(None)):
     result = pg_client.test_connection(config_data)
     return JSONResponse(content=result)
 
+@app.get("/api/pg-tables")
+def get_pg_tables():
+    pg_client = PostgreSQLClient()
+    tables = pg_client.get_tables()
+    return {"status": "success", "tables": tables}
+
+@app.get("/api/pg-table-columns/{table_name}")
+def get_pg_table_columns(table_name: str):
+    pg_client = PostgreSQLClient()
+    cols = pg_client.get_table_columns(table_name)
+    return {"status": "success", "table_name": table_name, "columns": cols}
+
 @app.post("/api/test-mariadb")
 def test_mariadb(config_data: dict = Body(None)):
     try:
