@@ -1,4 +1,5 @@
 import logging
+import re
 from src.db_client import MariaDBClient
 
 logger = logging.getLogger("LookupService")
@@ -7,16 +8,29 @@ class LookupService:
     def __init__(self, db_client: MariaDBClient = None):
         self.db_client = db_client or MariaDBClient()
         self.station_map = {}
+        self.normalized_station_map = {}
         self.charger_map = {}
         self.station_default_chargers = {}
         self.load_mappings()
 
+    def _normalize(self, text: str) -> str:
+        if not text:
+            return ""
+        # Remove extra whitespace and special surrounding characters
+        text = str(text).strip()
+        text = re.sub(r'\s+', ' ', text)
+        return text
+
     def load_mappings(self):
         """Load mappings from live MariaDB."""
         logger.info("Loading Station and Charger mappings...")
-        self.station_map = self.db_client.fetch_station_mappings()
+        raw_stations = self.db_client.fetch_station_mappings()
+        self.station_map = raw_stations
+        self.normalized_station_map = {self._normalize(k): v for k, v in raw_stations.items() if k}
         
-        # Load chargers
+        self.charger_map = {}
+        self.station_default_chargers = {}
+
         conn = self.db_client.get_connection()
         if conn:
             try:
@@ -31,7 +45,8 @@ class LookupService:
                     for row in rows:
                         cs_id = row['cs_id']
                         cp_id = row['cp_id']
-                        cp_name = row.get('cp_name', '').strip() if row.get('cp_name') else ''
+                        raw_cp_name = row.get('cp_name')
+                        cp_name = self._normalize(raw_cp_name) if raw_cp_name else ''
 
                         if cp_name:
                             self.charger_map[(cs_id, cp_name)] = cp_id
@@ -39,30 +54,34 @@ class LookupService:
 
                         if cs_id not in self.station_default_chargers:
                             self.station_default_chargers[cs_id] = cp_id
+            except Exception as e:
+                logger.error(f"Error loading charger mappings: {e}")
             finally:
                 conn.close()
                 
         logger.info(f"Loaded {len(self.station_map)} stations and {len(self.charger_map)} charger entries.")
 
+    def reload_mappings(self):
+        """Refresh station and charger mappings from MariaDB on demand."""
+        self.load_mappings()
+
     def get_cs_id(self, station_name: str) -> int:
         """Resolve station name to numeric csId with strict and safe matching."""
         if not station_name:
             return None
-        cleaned = station_name.strip()
+        cleaned = self._normalize(station_name)
 
         # 1. Exact match
-        if cleaned in self.station_map:
-            return self.station_map[cleaned]
+        if cleaned in self.normalized_station_map:
+            return self.normalized_station_map[cleaned]
 
-        # 2. Normalized prefix or exact containment match with length check
-        for name, cs_id in self.station_map.items():
+        # 2. Prefix or substring match with safety length constraints
+        for name, cs_id in self.normalized_station_map.items():
             if not name:
                 continue
-            # Direct prefix or suffix match
             if cleaned.startswith(name) or name.startswith(cleaned):
                 return cs_id
             
-            # Substring match with strict ratio (> 0.5) to avoid false positives (e.g., '서울' vs '서울 금천구청')
             if name in cleaned or cleaned in name:
                 min_len = min(len(name), len(cleaned))
                 max_len = max(len(name), len(cleaned))
@@ -75,13 +94,13 @@ class LookupService:
         """Resolve charger name to numeric cpId given numeric cs_id."""
         if not cs_id:
             return None
-        cleaned = charger_name.strip() if charger_name else ''
+        cleaned = self._normalize(charger_name) if charger_name else ''
         
-        # 1. Try direct match (cs_id, cp_name)
+        # 1. Direct match (cs_id, cp_name)
         if cleaned and (cs_id, cleaned) in self.charger_map:
             return self.charger_map[(cs_id, cleaned)]
             
-        # 2. Try global cp_name match
+        # 2. Global cp_name match
         if cleaned and cleaned in self.charger_map:
             return self.charger_map[cleaned]
             
@@ -92,9 +111,9 @@ class LookupService:
                     if mapped_key[1] in cleaned or cleaned in mapped_key[1]:
                         return cp_id
 
-        # 4. Fallback: Default charger for this station ONLY if charger_name was not specified
+        # 4. Fallback default charger if charger name is missing
         if not cleaned:
             return self.station_default_chargers.get(cs_id)
 
-        # Unmatched charger name -> return None to prevent binding wrong charger ID
         return None
+

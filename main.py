@@ -35,9 +35,12 @@ def main():
         print('=== Running CSV Dry-Run Transformation ===')
         importer = CSVImporter()
         result = importer.process_csv(args.csv_path, dry_run=True)
-        print('Result Summary:', result['status'].upper())
-        print('Total Rows:', result['total_rows'])
-        print('Mapped Records:', result['mapped_records'])
+        print('Result Summary:', result.get('status', 'unknown').upper())
+        if result.get('status') == 'success':
+            print('Total Rows:', result.get('total_rows', 0))
+            print('Mapped Records:', result.get('mapped_records', 0))
+        else:
+            print('Message:', result.get('message', 'No details'))
 
     elif args.csv_import:
         print('=== Executing Live CSV Import ===')

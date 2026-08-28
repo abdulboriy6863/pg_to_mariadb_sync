@@ -10,6 +10,35 @@ from src.lookup_service import LookupService
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("DailySyncer")
 
+GLOBAL_SYNC_PROGRESS = {
+    "is_running": False,
+    "status": "idle",
+    "total": 0,
+    "processed": 0,
+    "inserted": 0,
+    "duplicates": 0,
+    "unmapped": 0,
+    "percentage": 0.0,
+    "message": "Tayyor"
+}
+
+def update_global_progress(is_running=True, status="processing", total=0, processed=0, inserted=0, duplicates=0, unmapped=0, message=""):
+    pct = round((processed / total * 100.0), 1) if total > 0 else (100.0 if not is_running else 0.0)
+    GLOBAL_SYNC_PROGRESS.update({
+        "is_running": is_running,
+        "status": status,
+        "total": total,
+        "processed": processed,
+        "inserted": inserted,
+        "duplicates": duplicates,
+        "unmapped": unmapped,
+        "percentage": min(100.0, pct),
+        "message": message
+    })
+
+def get_sync_progress_state():
+    return GLOBAL_SYNC_PROGRESS
+
 class DailySyncer:
     def __init__(self, db_config_path=None):
         if db_config_path is None:
@@ -37,27 +66,102 @@ class DailySyncer:
         except Exception as e:
             logger.error(f"Error saving sync history log: {e}")
 
-    def sync_daily_data(self, target_date=None, dry_run=True):
-        """Fetches daily data from PostgreSQL (for exactly 1 target date, default yesterday) and syncs to MariaDB."""
-        if target_date is None:
-            target_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-
+    def sync_daily_data(self, start_date=None, end_date=None, target_date=None, lookback_days=None, dry_run=True):
+        """Fetches daily data from PostgreSQL (for date range, target date or lookback_days window) and syncs to MariaDB."""
         start_time = datetime.now()
-        logger.info(f"Initiating Daily Sync for Date: {target_date} (dry_run={dry_run})")
-        
-        pg_records = []
+        today_str = start_time.strftime("%Y-%m-%d")
 
-        # Connect to PostgreSQL via PGClient
+        # Reset Progress
+        update_global_progress(is_running=True, status="initializing", message="PG so'rovi tayyorlanmoqda...")
+
+        # Future Date Validation
+        if start_date and start_date > today_str:
+            err_msg = f"Kelajak sanasi ({start_date}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun ({today_str})."
+            update_global_progress(is_running=False, status="error", message=err_msg)
+            return {
+                "status": "error",
+                "target_date": start_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "message": err_msg
+            }
+        if end_date and end_date > today_str:
+            err_msg = f"Kelajak sanasi ({end_date}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun ({today_str})."
+            update_global_progress(is_running=False, status="error", message=err_msg)
+            return {
+                "status": "error",
+                "target_date": end_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "message": err_msg
+            }
+        if target_date and target_date > today_str:
+            err_msg = f"Kelajak sanasi ({target_date}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun ({today_str})."
+            update_global_progress(is_running=False, status="error", message=err_msg)
+            return {
+                "status": "error",
+                "target_date": target_date,
+                "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "message": err_msg
+            }
+
+        is_range_query = False
+        target_dates = []
+
+        if start_date and end_date:
+            if start_date > end_date:
+                start_date, end_date = end_date, start_date
+            date_summary_str = f"{start_date} ~ {end_date}"
+            is_range_query = True
+        elif start_date:
+            date_summary_str = start_date
+            target_dates = [start_date]
+        elif target_date:
+            date_summary_str = target_date
+            target_dates = [target_date]
+        else:
+            if lookback_days is None:
+                lookback_days = self.db_config.get("auto_sync", {}).get("lookback_days", 1)
+            try:
+                lookback_days = max(1, int(lookback_days))
+            except (ValueError, TypeError):
+                lookback_days = 1
+
+            target_dates = [
+                (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+                for i in range(1, lookback_days + 1)
+            ]
+            date_summary_str = target_dates[0] if len(target_dates) == 1 else f"{target_dates[-1]} ~ {target_dates[0]} ({len(target_dates)} kun)"
+
+        logger.info(f"Initiating Daily Sync for Date(s): {date_summary_str} (dry_run={dry_run})")
+        update_global_progress(is_running=True, status="querying_pg", message=f"PostgreSQL dan ({date_summary_str}) ma'lumotlar o'qilmoqda...")
+
+        pg_records = []
         conn = self.pg_client.get_connection()
         if conn:
             try:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT station_name, charger_name, begin_time, end_time, 
-                           power_kwh, price_won, card_no, pay_type
-                    FROM charging_history
-                    WHERE DATE(begin_time) = %s
-                """, (target_date,))
+                if is_range_query:
+                    cursor.execute("""
+                        SELECT station_name, charger_name, begin_time, end_time, 
+                               power_kwh, price_won, card_no, pay_type
+                        FROM charging_history
+                        WHERE DATE(begin_time) >= %s AND DATE(begin_time) <= %s
+                    """, (start_date, end_date))
+                elif len(target_dates) == 1:
+                    cursor.execute("""
+                        SELECT station_name, charger_name, begin_time, end_time, 
+                               power_kwh, price_won, card_no, pay_type
+                        FROM charging_history
+                        WHERE DATE(begin_time) = %s
+                    """, (target_dates[0],))
+                else:
+                    placeholders = ", ".join(["%s"] * len(target_dates))
+                    cursor.execute(f"""
+                        SELECT station_name, charger_name, begin_time, end_time, 
+                               power_kwh, price_won, card_no, pay_type
+                        FROM charging_history
+                        WHERE DATE(begin_time) IN ({placeholders})
+                    """, tuple(target_dates))
+
                 columns = [desc[0] for desc in cursor.description]
                 for row in cursor.fetchall():
                     pg_records.append(dict(zip(columns, row)))
@@ -67,11 +171,13 @@ class DailySyncer:
                 conn.close()
         else:
             logger.warning("PostgreSQL connection unavailable. Daily sync cannot proceed without PG connection.")
+            err_msg = "PostgreSQL connection offline. Please check DB credentials."
+            update_global_progress(is_running=False, status="offline", message=err_msg)
             result = {
                 "status": "skipped",
-                "target_date": target_date,
+                "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "message": "PostgreSQL connection offline. Please check DB credentials.",
+                "message": err_msg,
                 "count": 0
             }
             if not dry_run:
@@ -79,23 +185,28 @@ class DailySyncer:
             return result
 
         if not pg_records:
-            logger.info(f"No records found in PostgreSQL for {target_date}.")
+            logger.info(f"No records found in PostgreSQL for {date_summary_str}.")
+            msg = f"No records found in PG for date range {date_summary_str}"
+            update_global_progress(is_running=False, status="completed", message=msg)
             result = {
                 "status": "success",
-                "target_date": target_date,
+                "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "count": 0,
-                "message": f"No records found in PG for date {target_date}"
+                "message": msg
             }
             if not dry_run:
                 self._save_history_entry(result)
             return result
 
+        total_pg_count = len(pg_records)
+        update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=0, message="Stansiya va zaryadlovchilar ID ga moslanmoqda...")
+
         transformed = []
         missing_stations = set()
         missing_chargers = set()
 
-        for r in pg_records:
+        for idx, r in enumerate(pg_records):
             st_name = r.get("station_name")
             cp_name = r.get("charger_name")
 
@@ -103,16 +214,20 @@ class DailySyncer:
             if not cs_id:
                 if st_name:
                     missing_stations.add(st_name)
+                if idx % 500 == 0:
+                    update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=idx, unmapped=total_pg_count - len(transformed), message="Moslashtirilmoqda...")
                 continue
 
             cp_id = self.lookup_service.get_cp_id(cs_id, cp_name)
             if not cp_id:
                 if cp_name:
                     missing_chargers.add(f"{st_name} -> {cp_name}")
+                if idx % 500 == 0:
+                    update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=idx, unmapped=total_pg_count - len(transformed), message="Moslashtirilmoqda...")
                 continue
 
-            begin_str = str(r.get("begin_time", f"{target_date} 00:00:00"))
-            end_str = str(r.get("end_time", f"{target_date} 00:00:00"))
+            begin_str = str(r.get("begin_time", ""))
+            end_str = str(r.get("end_time", ""))
 
             raw = f"{cs_id}_{cp_id}_{begin_str}"
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)
@@ -135,15 +250,19 @@ class DailySyncer:
                 "soc": 0
             })
 
+            if idx % 500 == 0 or idx == total_pg_count - 1:
+                update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=idx + 1, unmapped=idx + 1 - len(transformed), message="Moslashtirilmoqda...")
+
         unmapped_count = len(pg_records) - len(transformed)
-        logger.info(f"Transformed {len(transformed)} / {len(pg_records)} records for {target_date}. Unmapped: {unmapped_count}")
+        logger.info(f"Transformed {len(transformed)} / {len(pg_records)} records for {date_summary_str}. Unmapped: {unmapped_count}")
 
         if dry_run:
             logger.info("=== DRY RUN DAILY SYNC RESULT ===")
+            update_global_progress(is_running=False, status="completed", total=total_pg_count, processed=total_pg_count, inserted=0, duplicates=0, unmapped=unmapped_count, message="Dry-Run Sinov muvaffaqiyatli tugadi!")
             return {
                 "status": "success",
                 "mode": "dry_run",
-                "target_date": target_date,
+                "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "total_pg_records": len(pg_records),
                 "transformed_count": len(transformed),
@@ -152,11 +271,38 @@ class DailySyncer:
                 "missing_chargers": list(missing_chargers)[:10]
             }
         else:
-            inserted, dupes = self.mariadb_client.insert_batch_charge_history(transformed)
+            update_global_progress(is_running=True, status="inserting", total=total_pg_count, processed=unmapped_count, inserted=0, duplicates=0, unmapped=unmapped_count, message="MariaDB ga paketlab yozilmoqda...")
+
+            def progress_cb(proc_batch, ins_batch, dupes_batch):
+                tot_proc = unmapped_count + proc_batch
+                update_global_progress(
+                    is_running=True,
+                    status="inserting",
+                    total=total_pg_count,
+                    processed=tot_proc,
+                    inserted=ins_batch,
+                    duplicates=dupes_batch,
+                    unmapped=unmapped_count,
+                    message=f"MariaDB ga ko'chirilmoqda ({ins_batch} ta kiritildi, {dupes_batch} ta dublikat)..."
+                )
+
+            inserted, dupes = self.mariadb_client.insert_batch_charge_history(transformed, progress_callback=progress_cb)
+
+            update_global_progress(
+                is_running=False,
+                status="completed",
+                total=total_pg_count,
+                processed=total_pg_count,
+                inserted=inserted,
+                duplicates=dupes,
+                unmapped=unmapped_count,
+                message="Sinxronizatsiya muvaffaqiyatli yakunlandi!"
+            )
+
             res = {
                 "status": "success",
                 "mode": "live",
-                "target_date": target_date,
+                "target_date": date_summary_str,
                 "timestamp": start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "total_pg_records": len(pg_records),
                 "inserted": inserted,

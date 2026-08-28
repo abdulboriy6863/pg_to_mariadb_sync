@@ -13,7 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from src.db_client import MariaDBClient
 from src.pg_client import PostgreSQLClient
 from src.csv_importer import CSVImporter
-from src.daily_syncer import DailySyncer
+from src.daily_syncer import DailySyncer, get_sync_progress_state
 
 app = FastAPI(title="PostgreSQL to MariaDB Migration & Sync Dashboard")
 
@@ -26,23 +26,60 @@ SYNC_HISTORY_PATH = os.path.join(BASE_DIR, "logs", "sync_history.json")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
-# 02:00 AM Daily Auto-Sync Scheduler
+# Daily Auto-Sync Scheduler
 scheduler = BackgroundScheduler()
 
-def run_scheduled_02am_sync():
-    logging.info("⏰ Executing Automatic 02:00 AM Daily Sync (PostgreSQL ➔ MariaDB)...")
+def run_scheduled_sync():
+    logging.info("⏰ Executing Automatic Daily Sync (PostgreSQL ➔ MariaDB)...")
     try:
         syncer = DailySyncer()
         res = syncer.sync_daily_data(dry_run=False)
-        logging.info(f"02:00 AM Daily Sync Completed: {res}")
+        logging.info(f"Daily Sync Completed: {res}")
     except Exception as e:
-        logging.error(f"02:00 AM Daily Sync Error: {e}")
+        logging.error(f"Daily Sync Error: {e}")
+
+def get_auto_sync_config():
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                return cfg.get("auto_sync", {"enabled": True, "hour": 2, "minute": 0, "second": 0, "start_date": ""})
+        except Exception:
+            pass
+    return {"enabled": True, "hour": 2, "minute": 0, "second": 0, "start_date": ""}
+
+def apply_auto_sync_schedule(auto_sync_cfg=None):
+    if auto_sync_cfg is None:
+        auto_sync_cfg = get_auto_sync_config()
+    
+    enabled = auto_sync_cfg.get("enabled", True)
+    try:
+        hour = int(auto_sync_cfg.get("hour", 2)) % 24
+        minute = int(auto_sync_cfg.get("minute", 0)) % 60
+        second = int(auto_sync_cfg.get("second", 0)) % 60
+    except (ValueError, TypeError):
+        hour, minute, second = 2, 0, 0
+
+    job = scheduler.get_job("daily_sync_job")
+    
+    if enabled:
+        if job:
+            scheduler.reschedule_job("daily_sync_job", trigger="cron", hour=hour, minute=minute, second=second)
+            logging.info(f"🔄 Rescheduled daily_sync_job to {hour:02d}:{minute:02d}:{second:02d}")
+        else:
+            scheduler.add_job(run_scheduled_sync, trigger="cron", hour=hour, minute=minute, second=second, id="daily_sync_job", replace_existing=True)
+            logging.info(f"✅ Scheduled daily_sync_job at {hour:02d}:{minute:02d}:{second:02d}")
+    else:
+        if job:
+            scheduler.remove_job("daily_sync_job")
+            logging.info("🛑 Removed daily_sync_job (Disabled).")
 
 @app.on_event("startup")
 def start_scheduler():
-    scheduler.add_job(run_scheduled_02am_sync, trigger="cron", hour=2, minute=0, id="daily_sync_job", replace_existing=True)
-    scheduler.start()
-    logging.info("✅ 02:00 AM Daily Auto-Sync Scheduler started successfully.")
+    if not scheduler.running:
+        scheduler.start()
+    apply_auto_sync_schedule()
+    logging.info("✅ Daily Auto-Sync Scheduler initialized successfully.")
 
 @app.on_event("shutdown")
 def stop_scheduler():
@@ -66,6 +103,8 @@ def get_config():
         if "postgresql" in masked_cfg and "password" in masked_cfg["postgresql"]:
             if masked_cfg["postgresql"]["password"]:
                 masked_cfg["postgresql"]["password"] = "******"
+        if "auto_sync" not in masked_cfg:
+            masked_cfg["auto_sync"] = get_auto_sync_config()
         return masked_cfg
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read config: {e}")
@@ -85,6 +124,10 @@ def save_config(config_data: dict = Body(...)):
 
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+        if "auto_sync" in config_data:
+            apply_auto_sync_schedule(config_data["auto_sync"])
+
         return {"status": "success", "message": "Settings saved successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save config: {e}")
@@ -142,6 +185,10 @@ def get_status():
     pg_client = PostgreSQLClient()
     pg_test = pg_client.test_connection()
 
+    auto_cfg = get_auto_sync_config()
+    job = scheduler.get_job("daily_sync_job")
+    next_run = str(job.next_run_time) if job and hasattr(job, 'next_run_time') and job.next_run_time else None
+
     return {
         "mariadb": {
             "status": "online" if mariadb_online else "offline",
@@ -158,6 +205,14 @@ def get_status():
             "port": pg_client.config.get("port", 5432),
             "database": pg_client.config.get("database", "old_charging_db"),
             "message": pg_test["message"]
+        },
+        "auto_sync": {
+            "enabled": auto_cfg.get("enabled", True),
+            "hour": auto_cfg.get("hour", 2),
+            "minute": auto_cfg.get("minute", 0),
+            "second": auto_cfg.get("second", 0),
+            "start_date": auto_cfg.get("start_date", ""),
+            "next_run": next_run
         }
     }
 
@@ -186,9 +241,21 @@ def upload_csv(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.post("/api/daily-sync")
-def trigger_daily_sync(dry_run: bool = Form(True)):
+def trigger_daily_sync(
+    start_date: str = Form(None),
+    end_date: str = Form(None),
+    target_date: str = Form(None),
+    lookback_days: int = Form(None),
+    dry_run: bool = Form(True)
+):
     syncer = DailySyncer()
-    result = syncer.sync_daily_data(dry_run=dry_run)
+    result = syncer.sync_daily_data(
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None,
+        target_date=target_date if target_date else None,
+        lookback_days=lookback_days,
+        dry_run=dry_run
+    )
     return JSONResponse(content=result)
 
 @app.get("/api/sync-history")
@@ -201,3 +268,7 @@ def get_sync_history():
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     return []
+
+@app.get("/api/sync-progress")
+def get_sync_progress():
+    return JSONResponse(content=get_sync_progress_state())

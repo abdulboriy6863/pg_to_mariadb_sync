@@ -121,8 +121,8 @@ body {
 /* Status Grid */
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .card {
@@ -334,23 +334,42 @@ body {
 
 /* Terminal / Log Viewer */
 .terminal-window {
-  background: #050811;
+  background: #030712;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 14px 18px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 13px;
-  height: 380px;
+  height: 125px;
+  max-height: 125px;
   overflow-y: auto;
+  overflow-x: hidden;
   color: #a7f3d0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7);
+}
+
+.terminal-window::-webkit-scrollbar {
+  width: 8px;
+}
+.terminal-window::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.terminal-window::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 4px;
+}
+.terminal-window::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.4);
 }
 
 .log-line {
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-all;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .log-info { color: #818cf8; }
@@ -358,11 +377,42 @@ body {
 .log-warn { color: #fbbf24; }
 .log-error { color: #f87171; }
 
-/* Header Actions */
+/* Header Actions & Language Switcher */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.lang-selector-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.lang-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.lang-select:hover, .lang-select:focus {
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.25);
+}
+
+.lang-select option {
+  background: #0f172a;
+  color: #fff;
+  padding: 8px;
 }
 
 /* Modal Window */
@@ -551,4 +601,75 @@ body {
   .btn-group { flex-direction: column; }
   .form-grid { grid-template-columns: 1fr; }
 }
+
+/* Batch Schedule Single Status Card */
+.batch-schedule-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.batch-schedule-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.batch-schedule-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+  flex-shrink: 0;
+}
+
+.batch-schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.batch-schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.batch-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.batch-time-highlight {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: -0.3px;
+}
+
+.batch-schedule-meta {
+  font-size: 13px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
 

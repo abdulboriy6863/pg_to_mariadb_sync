@@ -123,8 +123,8 @@ class MariaDBClient:
         finally:
             conn.close()
 
-    def insert_batch_charge_history(self, records, chunk_size=2000):
-        """Batch insert records into TCSP_CHARGE_HIST using INSERT IGNORE with chunking."""
+    def insert_batch_charge_history(self, records, chunk_size=2000, progress_callback=None):
+        """Batch insert records into TCSP_CHARGE_HIST using INSERT IGNORE with chunking and progress reporting."""
         if not records:
             return 0, 0
 
@@ -141,6 +141,8 @@ class MariaDBClient:
         values_list = [[r[col] for col in columns] for r in records]
 
         total_inserted = 0
+        processed_count = 0
+
         try:
             with conn.cursor() as cursor:
                 for i in range(0, len(values_list), chunk_size):
@@ -148,6 +150,11 @@ class MariaDBClient:
                     inserted_chunk = cursor.executemany(sql, chunk)
                     conn.commit()
                     total_inserted += inserted_chunk
+                    processed_count += len(chunk)
+
+                    if progress_callback:
+                        dupes_so_far = processed_count - total_inserted
+                        progress_callback(processed_count, total_inserted, dupes_so_far)
                 
                 logger.info(f"Successfully inserted {total_inserted} out of {len(records)} records into TCSP_CHARGE_HIST.")
                 return total_inserted, len(records) - total_inserted
