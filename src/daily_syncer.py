@@ -179,23 +179,31 @@ class DailySyncer:
             try:
                 cursor = conn.cursor()
                 select_clause = f"""
-                    SELECT {st_col} AS station_name,
-                           {cp_col} AS charger_name,
-                           {begin_col} AS begin_time,
-                           {end_col} AS end_time,
-                           {power_col} AS power_kwh,
-                           {price_col} AS price_won,
-                           {card_col} AS card_no,
-                           {pay_col} AS pay_type
-                    FROM {pg_table}
+                    SELECT COALESCE(s.station_name, h.{st_col}) AS station_name,
+                           COALESCE(c.charger_name, h.{cp_col}) AS charger_name,
+                           CASE WHEN h.start_date IS NOT NULL AND h.start_time IS NOT NULL 
+                                THEN CONCAT(h.start_date, ' ', h.start_time)
+                                ELSE CAST(h.{begin_col} AS VARCHAR) END AS begin_time,
+                           CASE WHEN h.end_date IS NOT NULL AND h.end_time IS NOT NULL 
+                                THEN CONCAT(h.end_date, ' ', h.end_time)
+                                ELSE CAST(h.{end_col} AS VARCHAR) END AS end_time,
+                           CASE WHEN h.use_power IS NOT NULL THEN (CASE WHEN h.use_power > 5000 THEN ROUND(CAST(h.use_power AS NUMERIC) / 1000.0, 2) ELSE CAST(h.use_power AS NUMERIC) END)
+                                ELSE CAST(h.{power_col} AS NUMERIC) END AS power_kwh,
+                           COALESCE(h.use_payment, h.{price_col}) AS price_won,
+                           h.{card_col} AS card_no,
+                           h.{pay_col} AS pay_type
+                    FROM {pg_table} h
+                    LEFT JOIN station s ON h.{st_col} = s.station_id
+                    LEFT JOIN charger c ON (h.{st_col} = c.station_id AND (h.{cp_col} = c.charger_no OR h.{cp_col} = c.charger_id))
                 """
+                date_expr = f"COALESCE(h.start_date, DATE(h.{begin_col}))"
                 if is_range_query:
-                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) >= %s AND DATE({begin_col}) <= %s", (start_date, end_date))
+                    cursor.execute(f"{select_clause} WHERE {date_expr} >= %s AND {date_expr} <= %s", (start_date, end_date))
                 elif len(target_dates) == 1:
-                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) = %s", (target_dates[0],))
+                    cursor.execute(f"{select_clause} WHERE {date_expr} = %s", (target_dates[0],))
                 else:
                     placeholders = ", ".join(["%s"] * len(target_dates))
-                    cursor.execute(f"{select_clause} WHERE DATE({begin_col}) IN ({placeholders})", tuple(target_dates))
+                    cursor.execute(f"{select_clause} WHERE {date_expr} IN ({placeholders})", tuple(target_dates))
 
                 columns = [desc[0] for desc in cursor.description]
                 for row in cursor.fetchall():

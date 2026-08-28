@@ -111,9 +111,6 @@ class LookupService:
                     if mapped_key[1] in cleaned or cleaned in mapped_key[1]:
                         return cp_id
 
-        # 4. Fallback default charger if charger name is missing
-        if not cleaned:
-            return self.station_default_chargers.get(cs_id)
-
-        return None
+        # 4. Fallback default charger for this station if name missing or unmatched
+        return self.station_default_chargers.get(cs_id)
 

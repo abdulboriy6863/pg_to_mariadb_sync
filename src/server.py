@@ -372,10 +372,18 @@ def get_schema_preview_sample():
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT * FROM {pg_table} ORDER BY 1 DESC LIMIT 1")
+            join_sql = f"""
+                SELECT h.*, s.station_name, c.charger_name 
+                FROM {pg_table} h 
+                LEFT JOIN station s ON h.station_id = s.station_id 
+                LEFT JOIN charger c ON (h.station_id = c.station_id AND (h.charger_no = c.charger_no OR h.charger_id = c.charger_id)) 
+                WHERE s.station_name IS NOT NULL 
+                ORDER BY 1 DESC LIMIT 1
+            """
+            cursor.execute(join_sql)
             row = cursor.fetchone()
             if not row:
-                cursor.execute(f"SELECT * FROM {pg_table} LIMIT 1")
+                cursor.execute(f"SELECT * FROM {pg_table} ORDER BY 1 DESC LIMIT 1")
                 row = cursor.fetchone()
             if row:
                 col_names = [desc[0] for desc in cursor.description]
@@ -404,8 +412,10 @@ def get_schema_preview_sample():
                 return c, sample_row[c]
         return cols_to_try[0] if cols_to_try else "", ""
 
-    actual_st_col, st_val = find_val([st_col, "station_name", "station_id", "station"])
-    actual_cp_col, cp_val = find_val([cp_col, "charger_name", "charger_no", "charger_id", "charger"])
+    st_val = sample_row.get("station_name") or sample_row.get(st_col) or sample_row.get("station_id") or ""
+    cp_val = sample_row.get("charger_name") or sample_row.get(cp_col) or sample_row.get("charger_no") or ""
+    actual_st_col = "station_name" if ("station_name" in sample_row and sample_row["station_name"]) else st_col
+    actual_cp_col = "charger_name" if ("charger_name" in sample_row and sample_row["charger_name"]) else cp_col
 
     if "start_date" in sample_row and "start_time" in sample_row:
         begin_str = f"{sample_row['start_date']} {sample_row['start_time']}"
@@ -439,7 +449,7 @@ def get_schema_preview_sample():
     actual_pay_col, pay_val = find_val([pay_col, "pay_type", "roamingType", "pay_mode"])
 
     cs_id = lookup_service.get_cs_id(st_val) if st_val else None
-    cp_id = lookup_service.get_cp_id(cs_id, cp_val) if (cs_id and cp_val) else None
+    cp_id = lookup_service.get_cp_id(cs_id, cp_val) if cs_id else None
 
     raw_hash = f"{cs_id or 'CS_NULL'}_{cp_id or 'CP_NULL'}_{begin_str}"
     h = int(hashlib.md5(raw_hash.encode('utf-8')).hexdigest()[:12], 16)
