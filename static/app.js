@@ -727,11 +727,40 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.fetchStatus = fetchStatus;
 
+  async function checkMappingHealthBeforeSync() {
+    try {
+      const res = await fetch("/api/mapping-config");
+      const cfg = await res.json();
+      const pg = cfg.pg_schema_mapping || {};
+      const maria = cfg.mariadb_target_mapping || {};
+
+      const missingFields = [];
+      if (!pg.begin_time_col) missingFields.push("PostgreSQL Begin Time Column");
+      if (!pg.end_time_col) missingFields.push("PostgreSQL End Time Column");
+      if (!pg.power_kwh_col) missingFields.push("PostgreSQL Power Column");
+      if (!maria.begin_col) missingFields.push("MariaDB Begin Column");
+      if (!maria.end_col) missingFields.push("MariaDB End Column");
+      if (!maria.power_col) missingFields.push("MariaDB Power Column");
+
+      if (missingFields.length > 0) {
+        const warnMsg = `⚠️ Diqqat! Schema Mapping sozlanganida ba'zi muhim ustunlar tanlanmagan:\n- ${missingFields.join("\n- ")}\n\nBaribir davom ettirilsinmi? (Bekor qilib, Sozlamalardan to'g'rilashingiz mumkin)`;
+        appendLog(`⚠️ Schema Mapping Ogohlantirishi: Muhim ustunlar yetishmayapti (${missingFields.join(", ")})`, "warn");
+        return confirm(warnMsg);
+      }
+    } catch (e) {
+      console.warn("Mapping health check error:", e);
+    }
+    return true;
+  }
+
   async function uploadAndExecute(dryRun) {
     if (!selectedFile) {
       alert("Iltimos, avval CSV faylni yuklang!");
       return;
     }
+
+    const healthOk = await checkMappingHealthBeforeSync();
+    if (!healthOk) return;
 
     if (dryRun) {
       if (!latestStatus) {
@@ -791,6 +820,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function triggerDailySync(dryRun = true) {
+    const healthOk = await checkMappingHealthBeforeSync();
+    if (!healthOk) return;
+
     if (dryRun) {
       if (!latestStatus) {
         await fetchStatus();
