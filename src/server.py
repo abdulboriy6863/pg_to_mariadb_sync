@@ -131,12 +131,16 @@ def save_config(config_data: dict = Body(...)):
                     cur_sec["database"] = ex_sec.get("database")
                 if not cur_sec.get("user") and ex_sec.get("user"):
                     cur_sec["user"] = ex_sec.get("user")
-
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
+                existing_cfg[section] = cur_sec
 
         if "auto_sync" in config_data:
-            apply_auto_sync_schedule(config_data["auto_sync"])
+            existing_cfg["auto_sync"] = config_data["auto_sync"]
+
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(existing_cfg, f, indent=2, ensure_ascii=False)
+
+        if "auto_sync" in existing_cfg:
+            apply_auto_sync_schedule(existing_cfg["auto_sync"])
 
         return {"status": "success", "message": "Settings saved successfully!"}
     except Exception as e:
