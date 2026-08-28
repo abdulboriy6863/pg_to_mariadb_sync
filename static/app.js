@@ -157,28 +157,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = document.createElement("div");
     row.id = rowId;
     row.className = "custom-mapping-row";
-    row.style.cssText = "display: flex; gap: 8px; align-items: center;";
+    row.style.cssText = "display: flex; gap: 8px; align-items: center; margin-bottom: 6px;";
 
     row.innerHTML = `
       <div style="flex: 1;">
-        <input type="text" class="custom-pg-col" value="${pgCol}" placeholder="PostgreSQL Ustun (masalan: soc)" list="pgColumnsDatalist" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+        <input type="text" class="custom-pg-col" value="${pgCol}" placeholder="PostgreSQL Ustun (masalan: soc)" list="pgColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
       </div>
-      <span style="color: #a78bfa; font-weight: 700; font-size: 13px;">➔</span>
+      <span style="color: #a78bfa; font-weight: 700; font-size: 14px;">➔</span>
       <div style="flex: 1;">
-        <input type="text" class="custom-maria-col" value="${mariaCol}" placeholder="MariaDB Target Ustun (masalan: startSoc)" list="mariaColumnsDatalist" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+        <input type="text" class="custom-maria-col" value="${mariaCol}" placeholder="MariaDB Target Ustun (masalan: startSoc)" list="mariaColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="removeCustomMappingRow('${rowId}')" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 10px; border-radius: 6px;" title="O'chirish">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="removeCustomMappingRow('${rowId}')" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 7px 11px; border-radius: 8px; cursor: pointer;" title="O'chirish">
         🗑️
       </button>
     `;
 
     container.appendChild(row);
   }
+  window.addCustomMappingRow = addCustomMappingRow;
 
   function removeCustomMappingRow(rowId) {
     const el = document.getElementById(rowId);
     if (el) el.remove();
   }
+  window.removeCustomMappingRow = removeCustomMappingRow;
 
   function closeSettingsModal() {
     if (settingsModal) settingsModal.style.display = "none";
