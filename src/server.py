@@ -285,6 +285,13 @@ def validate_schema():
         elif maria_domain == "tariff_price":
             recommendations["rec_pg_table"] = "unit_price_time"
 
+    pg_available_tables = []
+    if pg_connected and not pg_table_ok:
+        try:
+            pg_available_tables = pg_client.get_tables()
+        except Exception:
+            pass
+
     return {
         "status": "success",
         "domain_mismatch": domain_mismatch,
@@ -306,6 +313,7 @@ def validate_schema():
             "matched_cols_count": len(pg_matched_cols),
             "total_req_cols": len(req_pg_cols),
             "missing_cols": pg_missing_cols,
+            "available_tables": pg_available_tables,
             "message": pg_status.get("message", "")
         }
     }

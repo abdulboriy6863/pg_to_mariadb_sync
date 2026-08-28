@@ -10,20 +10,28 @@ class MariaDBClient:
     def __init__(self, config_path=None):
         if config_path is None:
             config_path = os.path.join(os.path.dirname(__file__), "..", "config", "db_config.json")
-        
-        with open(config_path, "r", encoding="utf-8") as f:
-            full_config = json.load(f)
-            self.config = full_config.get("mariadb", {})
+        self.config_path = config_path
+        self.config = self._load_config()
+
+    def _load_config(self):
+        try:
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                full_config = json.load(f)
+                return full_config.get("mariadb", {})
+        except Exception as e:
+            logger.error(f"Error loading MariaDB config: {e}")
+            return {}
 
     def get_connection(self):
+        cfg = self._load_config()
         try:
             conn = pymysql.connect(
-                host=self.config.get("host"),
-                port=self.config.get("port", 3306),
-                user=self.config.get("user"),
-                password=self.config.get("password"),
-                database=self.config.get("database"),
-                connect_timeout=self.config.get("connect_timeout", 5),
+                host=cfg.get("host"),
+                port=cfg.get("port", 3306),
+                user=cfg.get("user"),
+                password=cfg.get("password"),
+                database=cfg.get("database"),
+                connect_timeout=cfg.get("connect_timeout", 5),
                 cursorclass=pymysql.cursors.DictCursor
             )
             return conn

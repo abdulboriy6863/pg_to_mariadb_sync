@@ -24,7 +24,7 @@ class PostgreSQLClient:
             return {}
 
     def get_connection(self, override_config=None):
-        cfg = override_config if override_config else self.config
+        cfg = override_config if override_config else self._load_config()
         try:
             conn = psycopg2.connect(
                 host=cfg.get("host", "127.0.0.1"),

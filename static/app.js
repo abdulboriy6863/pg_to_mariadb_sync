@@ -973,6 +973,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let pHtml = `<div><strong>🐘 PostgreSQL Source Table (${pgTable}):</strong> ${p.connected && p.table_ok ? "✅ Mavjud" : (p.connected ? "⚠️ Jadval topilmadi" : "❌ Ulanmadi (" + (p.message || "Offline") + ")")}</div>`;
         if (p.matched_cols_count !== undefined && p.total_req_cols !== undefined && p.table_ok) {
           pHtml += `<div><strong>📊 Source Columns:</strong> ${p.matched_cols_count}/${p.total_req_cols} ta ustunlar mos keldi</div>`;
+        } else if (p.connected && !p.table_ok) {
+          pHtml += `<div style="color: #fbbf24; font-size: 11px; margin-top: 3px;">⚠️ '${pgTable}' jadvali PostgreSQL bazasida topilmadi.</div>`;
+          if (p.available_tables && p.available_tables.length > 0) {
+            pHtml += `<div style="font-size: 11px; opacity: 0.9; margin-top: 3px;">💡 <strong>Baza ichidagi real jadvallar:</strong> ${p.available_tables.slice(0, 6).join(", ")}${p.available_tables.length > 6 ? "..." : ""}</div>`;
+          }
         } else {
           pHtml += `<div><strong>📊 Source Table Status:</strong> ${p.table_ok ? "✅ Jadval va ustunlar mavjud" : "⚠️ Jadval topilmadi yoki ulanmagan"}</div>`;
         }
