@@ -672,4 +672,36 @@ body {
   margin-top: 2px;
 }
 
+/* Table Selector Modal Styles */
+.table-select-card {
+  padding: 10px 14px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  word-break: break-all;
+}
+
+.table-select-card:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.table-select-card.active {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: #6366f1;
+  color: #818cf8;
+  font-weight: 600;
+}
+
+
 

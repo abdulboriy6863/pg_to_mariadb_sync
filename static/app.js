@@ -287,33 +287,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Fetch PG Tables
+  // Fetch PG & MariaDB Tables Modal Triggers
   const btnFetchPgTables = document.getElementById("btnFetchPgTables");
   if (btnFetchPgTables) {
-    btnFetchPgTables.addEventListener("click", async () => {
-      btnFetchPgTables.disabled = true;
-      btnFetchPgTables.textContent = "⌛ Jadvallar o'qilmoqda...";
-      try {
-        const res = await fetch("/api/pg-tables");
-        const data = await res.json();
-        if (data.status === "success" && data.tables && data.tables.length > 0) {
-          const selected = prompt(`📋 PostgreSQL (${data.tables.length} ta jadval topildi):\n\n` + data.tables.join("\n") + `\n\nManba jadval nomini tanlang:`, data.tables[0]);
-          if (selected) {
-            const pgTableNameInput = document.getElementById("pgTableName");
-            if (pgTableNameInput) pgTableNameInput.value = selected.trim();
-          }
-          appendLog(`📋 PostgreSQL jadvallari (${data.tables.length} ta): ` + data.tables.join(", "), "info");
-        } else {
-          alert("PostgreSQL bazasidan jadvallar o'qilmadi yoki ulanish o'chgan.");
-          appendLog("PostgreSQL bazasidan jadvallar o'qilmadi.", "warn");
-        }
-      } catch (err) {
-        alert("Jadvallarni olishda xatolik: " + err.message);
-      } finally {
-        btnFetchPgTables.disabled = false;
-        btnFetchPgTables.textContent = "📋 PG Jadvallarni Aniqlash";
-      }
-    });
+    btnFetchPgTables.addEventListener("click", () => openTableSelectorModal("postgres"));
+  }
+
+  const btnFetchMariaTables = document.getElementById("btnFetchMariaTables");
+  if (btnFetchMariaTables) {
+    btnFetchMariaTables.addEventListener("click", () => openTableSelectorModal("mariadb"));
   }
 
   // Test MariaDB Connection
@@ -897,6 +879,101 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  let currentTablesList = [];
+
+  async function openTableSelectorModal(dbType) {
+    const modal = document.getElementById("tableSelectorModal");
+    const title = document.getElementById("tableSelectorTitle");
+    const container = document.getElementById("tableListContainer");
+    const loading = document.getElementById("tableListLoading");
+    const searchInput = document.getElementById("tableSearchInput");
+
+    if (!modal || !container) return;
+
+    if (searchInput) searchInput.value = "";
+    container.innerHTML = "";
+    if (loading) loading.style.display = "block";
+    modal.style.display = "flex";
+
+    const isPg = dbType === "postgres";
+    if (title) {
+      title.textContent = isPg ? "🐘 PostgreSQL Bazasi Jadvallari" : "🐬 MariaDB Bazasi Jadvallari";
+    }
+
+    const endpoint = isPg ? "/api/pg-tables" : "/api/mariadb-tables";
+
+    try {
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      if (loading) loading.style.display = "none";
+
+      if (data.status === "success" && data.tables && data.tables.length > 0) {
+        currentTablesList = data.tables;
+        renderSelectorTables(currentTablesList, dbType);
+        appendLog(`${isPg ? 'PostgreSQL' : 'MariaDB'} jadvallari (${data.tables.length} ta) o'qildi.`, "info");
+      } else {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #f87171; padding: 20px;">⚠️ Jadvallar topilmadi yoki ulanish o'chgan.</div>`;
+      }
+    } catch (e) {
+      if (loading) loading.style.display = "none";
+      container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #f87171; padding: 20px;">❌ Xatolik: ${e.message}</div>`;
+    }
+  }
+
+  function renderSelectorTables(tables, dbType) {
+    const container = document.getElementById("tableListContainer");
+    if (!container) return;
+
+    if (tables.length === 0) {
+      container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #64748b; padding: 20px;">Mos jadval topilmadi.</div>`;
+      return;
+    }
+
+    const isPg = dbType === "postgres";
+    const icon = isPg ? "🐘" : "🐬";
+
+    container.innerHTML = tables.map(t => `
+      <div class="table-select-card" onclick="selectSelectorTable('${t}', '${dbType}')">
+        <span>${icon}</span>
+        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t}</span>
+        <span style="font-size: 11px; opacity: 0.6;">Tanlash ➔</span>
+      </div>
+    `).join("");
+  }
+
+  function selectSelectorTable(tableName, dbType) {
+    if (dbType === "postgres") {
+      const el1 = document.getElementById("pgTableName");
+      const el2 = document.getElementById("mapPgTable");
+      if (el1) el1.value = tableName;
+      if (el2) el2.value = tableName;
+    } else {
+      const el = document.getElementById("mapMariaTable");
+      if (el) el.value = tableName;
+    }
+    closeTableSelectorModal();
+    appendLog(`Jadval tanlandi: ${tableName}`, "success");
+  }
+
+  function closeTableSelectorModal() {
+    const modal = document.getElementById("tableSelectorModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  const tableSearchInput = document.getElementById("tableSearchInput");
+  if (tableSearchInput) {
+    tableSearchInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      const filtered = currentTablesList.filter(t => t.toLowerCase().includes(term));
+      const currentTitle = document.getElementById("tableSelectorTitle")?.textContent || "";
+      const dbType = currentTitle.includes("PostgreSQL") ? "postgres" : "mariadb";
+      renderSelectorTables(filtered, dbType);
+    });
+  }
+
   window.validateSchema = validateSchema;
+  window.openTableSelectorModal = openTableSelectorModal;
+  window.selectSelectorTable = selectSelectorTable;
+  window.closeTableSelectorModal = closeTableSelectorModal;
 });
 

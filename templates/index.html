@@ -221,7 +221,10 @@
             </div>
           </div>
           <div class="test-result-box" id="mariaTestResult"></div>
-          <button id="btnTestMaria" class="btn btn-secondary mt-12" data-i18n="btn_test_maria">🔍 MariaDB 연결 테스트</button>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button id="btnTestMaria" class="btn btn-secondary" style="flex: 1;" data-i18n="btn_test_maria">🔍 MariaDB 연결 테스트</button>
+            <button id="btnFetchMariaTables" class="btn btn-secondary" style="flex: 1;">🐬 MariaDB Jadvallarni Aniqlash</button>
+          </div>
         </div>
 
         <!-- Schema & Column Mapping Tab -->
@@ -347,6 +350,29 @@
       <div class="modal-footer">
         <button id="btnCancelSettings" onclick="window.closeSettingsModal && window.closeSettingsModal()" class="btn btn-secondary" data-i18n="btn_cancel">취소</button>
         <button id="btnSaveSettings" class="btn btn-primary" data-i18n="btn_save">💾 설정 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modern Table Selector Modal -->
+  <div id="tableSelectorModal" class="modal" style="display: none; z-index: 1150;">
+    <div class="modal-content" style="max-width: 560px; border-radius: 16px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); padding: 20px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 id="tableSelectorTitle" style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc;">📋 Bazadagi Jadvallarni Tanlash</h3>
+        <button type="button" onclick="closeTableSelectorModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <div style="margin-bottom: 14px; position: relative;">
+          <input type="text" id="tableSearchInput" placeholder="🔍 Jadval nomini qidirish..." style="width: 100%; padding: 10px 14px; border-radius: 10px; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-color); color: #fff; font-size: 13px; outline: none;">
+        </div>
+        <div id="tableListLoading" style="display: none; text-align: center; padding: 24px; color: #64748b; font-size: 13px;">
+          ⏳ Jadvallar ro'yxati o'qilmoqda...
+        </div>
+        <div id="tableListContainer" style="max-height: 320px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; padding-right: 4px;">
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end; padding: 0;">
+        <button type="button" class="btn btn-secondary" onclick="closeTableSelectorModal()" style="padding: 8px 18px; font-size: 13px;">Yopish</button>
       </div>
     </div>
   </div>
