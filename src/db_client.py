@@ -92,8 +92,24 @@ class MariaDBClient:
         finally:
             conn.close()
 
+    def get_target_table(self):
+        """Fetch target table name from mapping_rules.json, defaulting to TCSP_CHARGE_HIST."""
+        try:
+            mapping_path = os.path.join(os.path.dirname(__file__), "..", "config", "mapping_rules.json")
+            if os.path.exists(mapping_path):
+                with open(mapping_path, "r", encoding="utf-8") as f:
+                    rules = json.load(f)
+                    target = rules.get("target_table", "").strip()
+                    if target:
+                        clean_name = target.replace("`", "")
+                        return f"`{clean_name}`"
+        except Exception as e:
+            logger.warning(f"Failed to read target_table from mapping_rules.json: {e}")
+        return "`TCSP_CHARGE_HIST`"
+
     def get_live_metrics(self):
         """Fetch count of imported/synced records using indexed query for high performance."""
+        target_table = self.get_target_table()
         conn = self.get_connection()
         if not conn:
             return {
@@ -103,11 +119,11 @@ class MariaDBClient:
         try:
             with conn.cursor() as cursor:
                 # Total tool-imported records (negative transactionId)
-                cursor.execute("SELECT COUNT(*) as cnt FROM TCSP_CHARGE_HIST WHERE transactionId < 0;")
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE transactionId < 0;")
                 total_imported_cnt = cursor.fetchone()['cnt']
 
                 # Today's tool-imported records
-                cursor.execute("SELECT COUNT(*) as cnt FROM TCSP_CHARGE_HIST WHERE transactionId < 0 AND DATE(begin) = CURDATE();")
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE transactionId < 0 AND DATE(begin) = CURDATE();")
                 today_cnt = cursor.fetchone()['cnt']
 
                 return {
@@ -115,7 +131,7 @@ class MariaDBClient:
                     "total_imported_count": total_imported_cnt
                 }
         except Exception as e:
-            logger.error(f"Error fetching live metrics: {e}")
+            logger.error(f"Error fetching live metrics from {target_table}: {e}")
             return {
                 "today_history_count": 0,
                 "total_imported_count": 0
@@ -124,10 +140,11 @@ class MariaDBClient:
             conn.close()
 
     def insert_batch_charge_history(self, records, chunk_size=2000, progress_callback=None):
-        """Batch insert records into TCSP_CHARGE_HIST using INSERT IGNORE with chunking and progress reporting."""
+        """Batch insert records into target MariaDB table using INSERT IGNORE with chunking and progress reporting."""
         if not records:
             return 0, 0
 
+        target_table = self.get_target_table()
         conn = self.get_connection()
         if not conn:
             logger.warning("MariaDB connection offline. Skipping live DB insert.")
@@ -137,7 +154,7 @@ class MariaDBClient:
         col_names = ", ".join([f"`{col}`" for col in columns])
         placeholders = ", ".join(["%s"] * len(columns))
         
-        sql = f"INSERT IGNORE INTO TCSP_CHARGE_HIST ({col_names}) VALUES ({placeholders})"
+        sql = f"INSERT IGNORE INTO {target_table} ({col_names}) VALUES ({placeholders})"
         values_list = [[r[col] for col in columns] for r in records]
 
         total_inserted = 0
@@ -156,11 +173,12 @@ class MariaDBClient:
                         dupes_so_far = processed_count - total_inserted
                         progress_callback(processed_count, total_inserted, dupes_so_far)
                 
-                logger.info(f"Successfully inserted {total_inserted} out of {len(records)} records into TCSP_CHARGE_HIST.")
+                logger.info(f"Successfully inserted {total_inserted} out of {len(records)} records into {target_table}.")
                 return total_inserted, len(records) - total_inserted
         except Exception as e:
-            logger.error(f"Batch insert error: {e}")
+            logger.error(f"Batch insert error for {target_table}: {e}")
             conn.rollback()
             return total_inserted, len(records) - total_inserted
         finally:
             conn.close()
+
