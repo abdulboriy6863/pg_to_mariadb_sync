@@ -326,7 +326,7 @@ class DailySyncer:
                 "soc": 0
             }
 
-            custom_maps = mapping_rules.get("custom_mappings", {})
+            custom_maps = getattr(self, "mapping_rules", {}).get("custom_mappings", {})
             if isinstance(custom_maps, dict):
                 for pg_c, maria_c in custom_maps.items():
                     if pg_c and maria_c and pg_c in r:
