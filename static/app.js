@@ -159,15 +159,19 @@ document.addEventListener("DOMContentLoaded", () => {
     row.className = "custom-mapping-row";
     row.style.cssText = "display: flex; gap: 8px; align-items: center; margin-bottom: 6px;";
 
+    const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+    const phPg = isKo ? "PostgreSQL 컬럼 (예: soc)" : "PostgreSQL Ustun (masalan: soc)";
+    const phMaria = isKo ? "MariaDB 대상 컬럼 (예: startSoc)" : "MariaDB Target Ustun (masalan: startSoc)";
+
     row.innerHTML = `
       <div style="flex: 1;">
-        <input type="text" class="custom-pg-col" value="${pgCol}" placeholder="PostgreSQL Ustun (masalan: soc)" list="pgColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
+        <input type="text" class="custom-pg-col" value="${pgCol}" placeholder="${phPg}" list="pgColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
       </div>
       <span style="color: #a78bfa; font-weight: 700; font-size: 14px;">➔</span>
       <div style="flex: 1;">
-        <input type="text" class="custom-maria-col" value="${mariaCol}" placeholder="MariaDB Target Ustun (masalan: startSoc)" list="mariaColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
+        <input type="text" class="custom-maria-col" value="${mariaCol}" placeholder="${phMaria}" list="mariaColumnsDatalist" style="width: 100%; font-size: 12px; padding: 8px 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: #fff;">
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="removeCustomMappingRow('${rowId}')" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 7px 11px; border-radius: 8px; cursor: pointer;" title="O'chirish">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="removeCustomMappingRow('${rowId}')" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 7px 11px; border-radius: 8px; cursor: pointer;" title="Delete">
         🗑️
       </button>
     `;
@@ -940,9 +944,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const m = data.mariadb;
         const p = data.postgres;
 
-        let mHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${m.matched_cols_count || 0}/${m.total_req_cols || 8} ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.85;">${m.exists ? '✅ Mavjud' : '⚠️ Topilmadi'}</span></div>`;
+        const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+        const mLabel = isKo ? "컬럼 매핑됨" : "ustun bog'landi";
+        const pLabel = isKo ? "컬럼 매핑됨" : "ustun bog'landi";
+        const mStatus = m.exists ? (isKo ? "✅ 존재함" : "✅ Mavjud") : (isKo ? "⚠️ 찾을 수 없음" : "⚠️ Topilmadi");
+        const pStatus = (p.connected && p.table_ok) ? (isKo ? "✅ 존재함" : "✅ Mavjud") : (isKo ? "⚠️ 오프라인" : "⚠️ Offline");
 
-        let pHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${p.matched_cols_count || 0}/${p.total_req_cols || 8} ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.85;">${p.connected && p.table_ok ? '✅ Mavjud' : '⚠️ Offline'}</span></div>`;
+        let mHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${m.matched_cols_count || 0}/${m.total_req_cols || 8} ${mLabel}</strong></span><span style="font-size: 10px; opacity: 0.85;">${mStatus}</span></div>`;
+
+        let pHtml = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${p.matched_cols_count || 0}/${p.total_req_cols || 8} ${pLabel}</strong></span><span style="font-size: 10px; opacity: 0.85;">${pStatus}</span></div>`;
 
         if (data.domain_mismatch && data.recommendations) {
           const recs = data.recommendations;
@@ -1088,7 +1098,10 @@ document.addEventListener("DOMContentLoaded", () => {
           pgBox.style.border = matchedCount === 8 ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)";
           pgBox.style.padding = "6px 12px";
 
-          pgBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${matchedCount}/8 ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ta ustun</span></div>`;
+          const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+          const pLabel = isKo ? "컬럼 매핑됨" : "ustun bog'landi";
+          const colLabel = isKo ? "개 컬럼" : "ta ustun";
+          pgBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐘 PG: <strong>${matchedCount}/8 ${pLabel}</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ${colLabel}</span></div>`;
         }
 
         appendLog(`🐘 PostgreSQL (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1157,7 +1170,10 @@ document.addEventListener("DOMContentLoaded", () => {
           mariaBox.style.border = matchedCount === 8 ? "1px solid rgba(52, 211, 153, 0.3)" : "1px solid rgba(52, 211, 153, 0.3)";
           mariaBox.style.padding = "6px 12px";
 
-          mariaBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${matchedCount}/8 ustun bog'landi</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ta ustun</span></div>`;
+          const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+          const mLabel = isKo ? "컬럼 매핑됨" : "ustun bog'landi";
+          const colLabel = isKo ? "개 컬럼" : "ta ustun";
+          mariaBox.innerHTML = `<div style="font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: space-between;"><span>🐬 MariaDB: <strong>${matchedCount}/8 ${mLabel}</strong></span><span style="font-size: 10px; opacity: 0.8;">${colNames.length} ${colLabel}</span></div>`;
         }
 
         appendLog(`🐬 MariaDB (${table}) ustunlari (${colNames.length} ta) muvaffaqiyatli o'qildi.`, "info");
@@ -1214,7 +1230,6 @@ document.addEventListener("DOMContentLoaded", () => {
       loadMariaTableColumns(tableName);
     }
     closeTableSelectorModal();
-    appendLog(`Jadval tanlandi: ${tableName}`, "success");
   }
 
   function closeTableSelectorModal() {
@@ -1257,9 +1272,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (loading) loading.style.display = "none";
 
+      const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+
       if (res.ok && data.status === "success" && data.sample_found && data.comparison && data.comparison.length > 0) {
         if (subtitle) {
-          subtitle.innerHTML = `PostgreSQL <code style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 2px 6px; border-radius: 4px;">${data.pg_table}</code> ➔ MariaDB <code style="color: #34d399; background: rgba(52,211,153,0.15); padding: 2px 6px; border-radius: 4px;">${data.maria_table}</code> formatiga o'girish taqqoslanishi (1-ta real yozuv)`;
+          subtitle.innerHTML = isKo ?
+            `PostgreSQL <code style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 2px 6px; border-radius: 4px;">${data.pg_table}</code> ➔ MariaDB <code style="color: #34d399; background: rgba(52,211,153,0.15); padding: 2px 6px; border-radius: 4px;">${data.maria_table}</code> 형식 변환 매핑 비교 (1건 실시간 샘플)` :
+            `PostgreSQL <code style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 2px 6px; border-radius: 4px;">${data.pg_table}</code> ➔ MariaDB <code style="color: #34d399; background: rgba(52,211,153,0.15); padding: 2px 6px; border-radius: 4px;">${data.maria_table}</code> formatiga o'girish taqqoslanishi (1-ta real yozuv)`;
         }
 
         if (tbody) {
@@ -1271,6 +1290,13 @@ document.addEventListener("DOMContentLoaded", () => {
               statusStyle = "background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);";
             } else if (item.status === "custom") {
               statusStyle = "background: rgba(167, 139, 250, 0.2); color: #c084fc; border: 1px solid rgba(167, 139, 250, 0.4);";
+            }
+
+            let badgeDisplay = item.badge_text || item.status;
+            if (isKo) {
+              if (badgeDisplay.includes("Mos keldi")) badgeDisplay = badgeDisplay.replace("Mos keldi", "매핑 완료");
+              if (badgeDisplay.includes("topilmadi")) badgeDisplay = badgeDisplay.replace("topilmadi", "미매핑");
+              if (badgeDisplay.includes("Bo'sh")) badgeDisplay = badgeDisplay.replace("Bo'sh", "비어있음");
             }
 
             return `
@@ -1286,7 +1312,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </td>
                 <td style="padding: 10px 14px; text-align: right;">
                   <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: sans-serif; ${statusStyle}">
-                    ${item.badge_text || item.status}
+                    ${badgeDisplay}
                   </span>
                 </td>
               </tr>
@@ -1295,16 +1321,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (container) container.style.display = "block";
-        appendLog(`🔍 Jonli ma'lumotlar taqqoslash modal-da ko'rsatildi (Source PG: ${data.pg_table}).`, "info");
       } else {
         if (emptyMsg) {
-          emptyMsg.textContent = data.message || "PostgreSQL bazasida namunaviy ma'lumot topilmadi.";
+          emptyMsg.textContent = data.message || (isKo ? "PostgreSQL DB에 샘플 데이터가 없습니다." : "PostgreSQL bazasida namunaviy ma'lumot topilmadi.");
         }
         if (emptyBox) emptyBox.style.display = "block";
       }
     } catch (err) {
       if (loading) loading.style.display = "none";
-      if (emptyMsg) emptyMsg.textContent = "Xatolik: " + err.message;
+      if (emptyMsg) emptyMsg.textContent = (isKo ? "오류 발생: " : "Xatolik: ") + err.message;
       if (emptyBox) emptyBox.style.display = "block";
     }
   }

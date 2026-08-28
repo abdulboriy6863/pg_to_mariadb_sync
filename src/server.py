@@ -699,15 +699,21 @@ def trigger_daily_sync(
     lookback_days: int = Form(None),
     dry_run: bool = Form(True)
 ):
-    syncer = DailySyncer()
-    result = syncer.sync_daily_data(
-        start_date=start_date if start_date else None,
-        end_date=end_date if end_date else None,
-        target_date=target_date if target_date else None,
-        lookback_days=lookback_days,
-        dry_run=dry_run
-    )
-    return JSONResponse(content=result)
+    try:
+        syncer = DailySyncer()
+        result = syncer.sync_daily_data(
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            target_date=target_date if target_date else None,
+            lookback_days=lookback_days,
+            dry_run=dry_run
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": f"Daily sync error: {str(e)}"}
+        )
 
 @app.get("/api/sync-history")
 def get_sync_history():
