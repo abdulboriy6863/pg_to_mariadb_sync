@@ -18,7 +18,7 @@ const translations = {
     card_postgres_sub_offline: "Sozlamalarni tekshiring",
 
     card_charge_hist_title: "TCSP_CHARGE_HIST (Ko'chirilgan Yozuvlar)",
-    card_charge_hist_sub: "Bugun: {today} ta | Jami ko'chirilgan: {total} ta",
+    card_charge_hist_sub: "Kechagi kun: {yesterday} ta | Jami ko'chirilgan: {total} ta",
 
     card_autosync_title: "Avto-Sync (Batch Vaqti)",
     card_autosync_active: "ACTIVE 🟢",
@@ -151,7 +151,7 @@ const translations = {
     card_postgres_sub_offline: "설정을 확인하세요",
 
     card_charge_hist_title: "TCSP_CHARGE_HIST (이관된 내역)",
-    card_charge_hist_sub: "오늘: {today}건 | 총 이관: {total}건",
+    card_charge_hist_sub: "어제: {yesterday}건 | 총 이관: {total}건",
 
     card_autosync_title: "자동 동기화 (배치 시간)",
     card_autosync_active: "ACTIVE 🟢",

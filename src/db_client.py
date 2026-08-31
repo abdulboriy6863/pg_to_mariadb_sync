@@ -265,6 +265,8 @@ class MariaDBClient:
         if not conn:
             return {
                 "today_history_count": 0,
+                "yesterday_history_count": 0,
+                "yesterday_date": "",
                 "total_imported_count": 0
             }
         try:
@@ -277,14 +279,27 @@ class MariaDBClient:
                 cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE {tx_col} < 0 AND DATE({begin_col}) = CURDATE();")
                 today_cnt = cursor.fetchone()['cnt']
 
+                # Yesterday's tool-imported records
+                cursor.execute(f"SELECT COUNT(*) as cnt FROM {target_table} WHERE {tx_col} < 0 AND DATE({begin_col}) = DATE_SUB(CURDATE(), INTERVAL 1 DAY);")
+                yesterday_cnt = cursor.fetchone()['cnt']
+
+                # Yesterday date string (YYYY-MM-DD)
+                cursor.execute("SELECT DATE_SUB(CURDATE(), INTERVAL 1 DAY) as y_date;")
+                y_row = cursor.fetchone()
+                yesterday_date = str(y_row['y_date']) if y_row and y_row.get('y_date') else ""
+
                 return {
                     "today_history_count": today_cnt,
+                    "yesterday_history_count": yesterday_cnt,
+                    "yesterday_date": yesterday_date,
                     "total_imported_count": total_imported_cnt
                 }
         except Exception as e:
             logger.error(f"Error fetching live metrics from {target_table}: {e}")
             return {
                 "today_history_count": 0,
+                "yesterday_history_count": 0,
+                "yesterday_date": "",
                 "total_imported_count": 0
             }
         finally:

@@ -659,14 +659,14 @@ document.addEventListener("DOMContentLoaded", () => {
           mariadbSub.textContent = window.i18n ? window.i18n.t("card_mariadb_sub_online", { st: stStr, cp: cpStr }) : `Stansiyalar: ${stStr} | Qurilmalar: ${cpStr}`;
 
           const metrics = data.mariadb.metrics || {};
-          const todayCnt = metrics.today_history_count || 0;
+          const yesterdayCnt = metrics.yesterday_history_count !== undefined ? metrics.yesterday_history_count : (metrics.today_history_count || 0);
           const totalCnt = metrics.total_imported_count || 0;
 
           if (todayHistoryValue) {
             todayHistoryValue.textContent = totalCnt.toLocaleString() + (window.i18n && window.i18n.getLanguage() === 'ko' ? "건" : " ta");
           }
           if (todayHistorySub) {
-            todayHistorySub.textContent = window.i18n ? window.i18n.t("card_charge_hist_sub", { today: todayCnt.toLocaleString(), total: totalCnt.toLocaleString() }) : `Bugun: ${todayCnt.toLocaleString()} ta | Jami ko'chirilgan: ${totalCnt.toLocaleString()} ta`;
+            todayHistorySub.textContent = window.i18n ? window.i18n.t("card_charge_hist_sub", { yesterday: yesterdayCnt.toLocaleString(), today: yesterdayCnt.toLocaleString(), total: totalCnt.toLocaleString() }) : `Kechagi kun: ${yesterdayCnt.toLocaleString()} ta | Jami ko'chirilgan: ${totalCnt.toLocaleString()} ta`;
           }
         } else {
           mariadbBadge.className = "badge badge-danger";
