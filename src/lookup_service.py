@@ -11,6 +11,8 @@ class LookupService:
         self.normalized_station_map = {}
         self.charger_map = {}
         self.station_default_chargers = {}
+        self.cs_cache = {}
+        self.cp_cache = {}
         self.load_mappings()
 
     def _normalize(self, text: str) -> str:
@@ -80,46 +82,61 @@ class LookupService:
         if not station_name and not charger_name:
             return None
 
+        cache_key = (station_name or "", charger_name or "")
+        if cache_key in self.cs_cache:
+            return self.cs_cache[cache_key]
+
+        res_cs_id = None
+
         # 1. Exact match on station_name
         if station_name:
             cleaned = self._normalize(station_name)
             if cleaned in self.normalized_station_map:
-                return self.normalized_station_map[cleaned]
+                res_cs_id = self.normalized_station_map[cleaned]
 
             # 2. Cleaned match without spaces, brackets, or corporate noise
-            clean_st = self._strip_noise(station_name)
-            if clean_st and len(clean_st) >= 2:
-                for name, cs_id in self.station_map.items():
-                    clean_m = self._strip_noise(name)
-                    if clean_m and (clean_st == clean_m or (len(clean_st) >= 4 and clean_st in clean_m) or (len(clean_m) >= 4 and clean_m in clean_st)):
-                        return cs_id
-
-            # 3. Substring / prefix match
-            for name, cs_id in self.normalized_station_map.items():
-                if not name:
-                    continue
-                if cleaned.startswith(name) or name.startswith(cleaned):
-                    return cs_id
-                
-                if name in cleaned or cleaned in name:
-                    min_len = min(len(name), len(cleaned))
-                    max_len = max(len(name), len(cleaned))
-                    if min_len >= 3 and (min_len / max_len) >= 0.5:
-                        return cs_id
-
-            # 4. Tokenized specific keyword match
-            tokens = [t for t in re.split(r'[^\w]', station_name) if len(t) >= 2 and t not in ['주식회사', '지솔라', '비공용', '사택', '본사', '테스트']]
-            tokens.sort(key=len, reverse=True)
-            for token in tokens:
-                clean_tok = self._strip_noise(token)
-                if len(clean_tok) >= 2:
+            if not res_cs_id:
+                clean_st = self._strip_noise(station_name)
+                if clean_st and len(clean_st) >= 2:
                     for name, cs_id in self.station_map.items():
                         clean_m = self._strip_noise(name)
-                        if clean_tok in clean_m:
-                            return cs_id
+                        if clean_m and (clean_st == clean_m or (len(clean_st) >= 4 and clean_st in clean_m) or (len(clean_m) >= 4 and clean_m in clean_st)):
+                            res_cs_id = cs_id
+                            break
+
+            # 3. Substring / prefix match
+            if not res_cs_id:
+                for name, cs_id in self.normalized_station_map.items():
+                    if not name:
+                        continue
+                    if cleaned.startswith(name) or name.startswith(cleaned):
+                        res_cs_id = cs_id
+                        break
+                    
+                    if name in cleaned or cleaned in name:
+                        min_len = min(len(name), len(cleaned))
+                        max_len = max(len(name), len(cleaned))
+                        if min_len >= 3 and (min_len / max_len) >= 0.5:
+                            res_cs_id = cs_id
+                            break
+
+            # 4. Tokenized specific keyword match
+            if not res_cs_id:
+                tokens = [t for t in re.split(r'[^\w]', station_name) if len(t) >= 2 and t not in ['주식회사', '지솔라', '비공용', '사택', '본사', '테스트']]
+                tokens.sort(key=len, reverse=True)
+                for token in tokens:
+                    clean_tok = self._strip_noise(token)
+                    if len(clean_tok) >= 2:
+                        for name, cs_id in self.station_map.items():
+                            clean_m = self._strip_noise(name)
+                            if clean_tok in clean_m:
+                                res_cs_id = cs_id
+                                break
+                    if res_cs_id:
+                        break
 
         # 5. Charger Name Fallback (for contractor/dummy station records like 유아이네트웍스, 마스터자동차, 마스타자동차)
-        if charger_name:
+        if not res_cs_id and charger_name:
             ch_clean = self._normalize(charger_name)
             # Extract station portion before dash (e.g. 영광만남의광장-7kw_06 -> 영광만남의광장)
             st_candidate = ch_clean.split('-')[0].strip() if '-' in ch_clean else ch_clean
@@ -130,42 +147,59 @@ class LookupService:
                 for name, cs_id in self.station_map.items():
                     clean_m = self._strip_noise(name)
                     if clean_m and (cand_clean == clean_m or cand_clean in clean_m or clean_m in cand_clean):
-                        return cs_id
+                        res_cs_id = cs_id
+                        break
 
                 # Tokenized keywords from charger station name
-                cand_tokens = [t for t in re.split(r'[^\w]', st_candidate) if len(t) >= 2 and t not in ['7kw', '50kw', '100kw', '200kw', '벽부형', '스탠드', '듀얼', '싱글', '비공용']]
-                cand_tokens.sort(key=len, reverse=True)
-                for ctok in cand_tokens:
-                    clean_ctok = self._strip_noise(ctok)
-                    if len(clean_ctok) >= 2:
-                        for name, cs_id in self.station_map.items():
-                            clean_m = self._strip_noise(name)
-                            if clean_ctok in clean_m:
-                                return cs_id
+                if not res_cs_id:
+                    cand_tokens = [t for t in re.split(r'[^\w]', st_candidate) if len(t) >= 2 and t not in ['7kw', '50kw', '100kw', '200kw', '벽부형', '스탠드', '듀얼', '싱글', '비공용']]
+                    cand_tokens.sort(key=len, reverse=True)
+                    for ctok in cand_tokens:
+                        clean_ctok = self._strip_noise(ctok)
+                        if len(clean_ctok) >= 2:
+                            for name, cs_id in self.station_map.items():
+                                clean_m = self._strip_noise(name)
+                                if clean_ctok in clean_m:
+                                    res_cs_id = cs_id
+                                    break
+                        if res_cs_id:
+                            break
 
-        return None
+        self.cs_cache[cache_key] = res_cs_id
+        return res_cs_id
 
     def get_cp_id(self, cs_id: int, charger_name: str) -> int:
-        """Resolve charger name to numeric cpId given numeric cs_id."""
+        """Resolve charger name to numeric cpId given numeric cs_id with high-speed memoization."""
         if not cs_id:
             return None
+
+        cache_key = (cs_id, charger_name or "")
+        if cache_key in self.cp_cache:
+            return self.cp_cache[cache_key]
+
         cleaned = self._normalize(charger_name) if charger_name else ''
+        res_cp_id = None
         
         # 1. Direct match (cs_id, cp_name)
         if cleaned and (cs_id, cleaned) in self.charger_map:
-            return self.charger_map[(cs_id, cleaned)]
+            res_cp_id = self.charger_map[(cs_id, cleaned)]
             
         # 2. Global cp_name match
-        if cleaned and cleaned in self.charger_map:
-            return self.charger_map[cleaned]
+        elif cleaned and cleaned in self.charger_map:
+            res_cp_id = self.charger_map[cleaned]
             
         # 3. Partial match for charger name at this station
-        if cleaned:
+        elif cleaned:
             for mapped_key, cp_id in self.charger_map.items():
                 if isinstance(mapped_key, tuple) and mapped_key[0] == cs_id:
                     if mapped_key[1] in cleaned or cleaned in mapped_key[1]:
-                        return cp_id
+                        res_cp_id = cp_id
+                        break
 
         # 4. Fallback default charger for this station if name missing or unmatched
-        return self.station_default_chargers.get(cs_id)
+        if not res_cp_id:
+            res_cp_id = self.station_default_chargers.get(cs_id)
+
+        self.cp_cache[cache_key] = res_cp_id
+        return res_cp_id
 
