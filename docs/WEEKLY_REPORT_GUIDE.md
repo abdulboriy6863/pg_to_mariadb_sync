@@ -1,77 +1,44 @@
-# 🌐 GLOBAL AI WEEKLY REPORT FRAMEWORK (Universal Qo'llanma) 📑
+# 🌐 AI UCHUN GLOBAL HAFTALIK HISOBOT QOIDASI (Universal No-Tech Framework) 📑
 
-Ushbu hujjat **har qanday dasturlash loyihasi, yangi tizim yoki texnik vazifa** bo'yicha haftalik hisobotlarni (har payshanba kuni rahbariyatga, investorlarga yoki no-tech menejerlarga) sodda, tushunarli va professional tilda shakllantirish uchun **Universal Qo'llanma va AI Prompt Qoidasi** hisoblanadi.
-
----
+Ushbu hujjat **har payshanba kuni rahbariyatga va dasturlashdan mutlaqo xabari bo'lmagan menejerlarga** beriladigan hisobotlarni shakllantirish bo'yicha qat'iy yo'riqnomadir.
 
 > [!IMPORTANT]
-> ### 🤖 BARCHA AI AGENTLAR UCHUN ASOSIY YO'RIQNOMA:
-> Foydalanuvchi sizga: **"Obsidian dagi report qo'llanmasiga qarab qilgan ishimiz bo'yicha hisobot yozib ber"** deganida:
-> 1. Suhbat davomida qilingan barcha texnik ishlarni (kod, arxitektura, tuzatishlar) tahlil qiling.
-> 2. Texnik so'zlarni (kod qatorlari, funksiyalar, kutubxonalar) **mutlaqo dasturchi bo'lmagan odam tushunadigan biznes foydasiga** o'giring.
-> 3. Quyidagi **4 bo'limli universal shablon** asosida chiroyli, aniq va topshirishga tayyor hisobot tuzing.
+> ### 🤖 BARCHA AI AGENTLAR UCHUN MUHIM QOIDA (Strict Rule):
+> Hisobotni tekshiruvchi rahbar **bu vazifani o'zi bermagan bo'lishi va kompaniyada loyihalar juda ko'p bo'lishi mumkin**. 
+> Shu sababli umumiy gaplar (*"tizim xatosi tuzatildi"*, *"kod optimizatsiya qilindi"*) yozilsa, u hech narsani tushunmaydi!
+> 
+> **AI hisobot tuzganda quyidagi 2 ta oltin qoidaga qat'iy amal qilishi SHART:**
+> 1. **1-O'RINDI: Aniq Loyiha Nomi:** Qaysi loyiha yoki tizim ekanligi aniq ko'rsatiladi.
+> 2. **2-O'RINDI: Bitta/Ikkita Aniq va Mazmunli Gap:** Hech qanday texnik terminlarsiz, aynan nima ish qilingani va qanday aniq natijaga erishilgani 1 ta gapda sodda qilib tushuntiriladi.
 
 ---
 
-## 1. 🧠 Texnik Tildan No-Tech (Biznes) Tiliga O'girish Lug'ati (Universal Translation Matrix)
-
-Har qanday loyihada texnik so'zlarni quyidagi ma'nolarga almashtiring:
-
-| Qilingan Texnik Ish (Backend/Frontend/DevOps) | Rahbariyat / Biznes Uchun Tushunarli Tilda |
-|---|---|
-| **Bug Fix / Exception Handling (`TypeError`, crash)** | *"Tizimning to'xtab qolish xatolari bartaraf etildi, dastur barqarorligi va ishonchliligi oshirildi."* |
-| **Database Migration / ETL / Sync** | *"Eski tizimdagi barcha ma'lumotlar yangi bazaga birorta ham yo'qotishsiz va xavfsiz ko'chirildi."* |
-| **Automation / Cron Job / Batch Script** | *"Inson aralashuvisiz har kuni o'z vaqtida avtomatik ishlaydigan xizmat yaratildi (qo'lda bajarish bekor qilindi, vaqt tejandi)."* |
-| **Optimization / Performance / Query Tuning** | *"Tizimning ishlash tezligi 5-10 barobarga oshirildi, server yuklamasi sezilarli darajada yengillashtirildi."* |
-| **Web UI / Dashboard / Frontend** | *"Barcha jarayonlarni brauzer orqali bir tugma bilan boshqarish va real vaqtda jonli kuzatish imkoniyati yaratildi."* |
-| **ID Resolution / Entity Mapping / Lookup** | *"Turli nomlar va tizimlar o'rtasidagi noaniqliklar bartaraf etilib, barcha ma'lumotlar o'zining to'g'ri manziliga 100% aniqlikda biriktirildi."* |
-| **Security / Idempotency / Deduplication** | *"Ma'lumotlarning takrorlanishi (dublikat bo'lishi) va noxush to'qnashuvlarning oldi olinib, xavfsizlik ta'minlandi."* |
-| **API Integration / Microservices** | *"Alohida tizimlar o'rtasida ma'lumotlarning uzluksiz va xavfsiz almashinuvi yo'lga qo'yildi."* |
-
----
-
-## 2. 📋 Universal Haftalik Hisobot Shabloni (Har Qanday Loyiha Uchun)
-
-AI hisobot yozishda faqat ushbu 4 ta bo'limdan foydalanadi:
+## 1. 🎯 Hisobotning Asosiy Formati (Standart Shablon)
 
 ```markdown
-# 📑 Haftalik Ish Hisoboti
-📅 **Sana:** [Bugungi sana: YYYY-MM-DD]
-👤 **Mas'ul xodim:** Abdulboriy
-🚀 **Loyiha / Tizim:** [Loyiha nomi]
-
----
-
-### 1. 🎯 Haftaning Asosiy Maqsadi va Biznes Qiymati
-* [Bu hafta qilingan ishlar kompaniyaga, xodimlarga yoki mijozlarga qanday foyda keltirishi haqida 1-2 gap]
-
----
-
-### 2. ✅ Bajarilgan Asosiy Ishlar (Oddiy va Londa Tilda)
-1. **[1-Asosiy Ish Nomi]:**
-   * [Nima qilindi, qanday qulaylik yaratildi yoki qanday muammo yechildi]
-2. **[2-Asosiy Ish Nomi]:**
-   * [Jarayon qanday osonlashtirildi yoki qanday avtomatlashtirildi]
-3. **[3-Asosiy Ish Nomi]:**
-   * [Qanday yangi imkoniyat yoki boshqaruv funksiyasi qo'shildi]
-
----
-
-### 3. 📊 Erishilgan Aniq Natijalar va Qulayliklar
-* **Aniqlik va Xavfsizlik:** [Masalan: 100% xatosiz ishlash, barcha ma'lumotlar to'liq saqlandi]
-* **Avtomatlashtirish & Vaqt Tejalishi:** [Masalan: Qo'l mehnati bekor qilindi, avtomatik rejimda ishlaydi]
-* **Boshqaruv & Monitoring:** [Masalan: Real vaqtda natijalarni ko'rish imkoniyati mavjud]
-
----
-
-### 4. 🔜 Kelgusi Hafta Rejalari
-* [Keyingi haftada nimalar qilinishi rejalashtirilgan – 1-2 ta asosiy punkt]
+**[Loyiha / Tizim Nomi]:**  
+[Eski/mavjud tizimdagi muammo yoki vazifa] bo'yicha [qilingan aniq ish] va [erishilgan 100% natija yoki avtomatlashtirish qulayligi] muvaffaqiyatli yakunlandi.
 ```
 
 ---
 
-## 3. 🎯 AI Uchun Yozish Qoidalari (Golden Rules):
+## 2. 💡 Loyihalar Bo'yicha Aniq Namunalar (Real Examples)
 
-1. **Jargonlardan qoching:** SQL so'rovlari, Python funksiyalari, `NoneType`, `regex` yoki server portlarini aslo yozmang.
-2. **Foydani birinchi o'ringa qo'ying:** Dasturchi bo'lmagan rahbar "Bu narsa kompaniyaga nima berdi?" degan savolga bir zumda javob topsin.
-3. **Stil:** Rasmiy, londa, g'alaba va natijaga yo'naltirilgan (Result-oriented).
+### ✅ Misol 1: Zaryadlash Ma'lumotlarini Ko'chirish Loyihasi (Hozirgi Loyiha)
+> **[PostgreSQL to MariaDB Ma'lumotlarni Ko'chirish Loyihasi]:**  
+> Eski serverdagi barcha yillarga tegishli elektromobil zaryadlash tarixi ma'lumotlarini (`충전이력`) yangi MariaDB bazasiga 100% to'liq, birorta ham chekni yo'qotmasdan va har kuni avtomatik ko'chib turadigan qilib sozlandi hamda muvaffaqiyatli sinovdan o'tkazildi.
+
+### ✅ Misol 2: To'lov Tizimi yoki Billing Loyihasi
+> **[Mijozlar To'lov Tizimi (Billing)]:**  
+> Foydalanuvchilar to'lov qilganda yuzaga kelayotgan kechikishlar bartaraf etilib, to'lov tasdiqlanishi va chek shakllanishi bir zumda (avtomatik) amalga oshadigan holatga keltirildi.
+
+### ✅ Misol 3: Admin Panel yoki Hisobotlar Boshqaruvi
+> **[Admin Boshqaruv Paneli]:**  
+> Barcha zaryadlash stansiyalari va tushgan daromadlarni kunlik/oylik kesimda bitta sahifada ko'rib turish va hisobotlarni Excel shaklida yuklab olish imkoniyati ishga tushirildi.
+
+---
+
+## 3. 🚫 AI Qilmasligi Kerak Bo'lgan Xatolar (Antipatterns)
+* ❌ *Xato:* `safe_float() qo'shildi, regex tuzatildi, TINF_CS bilan JOIN qilindi.` (Dasturlash bilmaydigan odam buni tushunmaydi).
+* ❌ *Xato:* `Tizimning to'xtab qolish xatoliklari bartaraf etildi.` (Qaysi tizim? Qayerdagi xato? Loyiha nomi yo'q).
+* ✅ *To'g'ri:* Aniq loyiha nomi + nima ish qilingani va qanday foyda bergani haqida 1 ta tushunarli gap.
