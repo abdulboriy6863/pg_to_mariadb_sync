@@ -94,22 +94,16 @@ def repair_legacy_config():
             with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
                 rules = json.load(f)
             pg_map = rules.setdefault("pg_schema_mapping", {})
-            pg_map["table_name"] = "using_history"
-            if pg_map.get("station_name_col") in ["station_name", "", None]:
-                pg_map["station_name_col"] = "station_id"
-            if pg_map.get("charger_name_col") in ["charger_name", "", None]:
-                pg_map["charger_name_col"] = "charger_no"
-            if pg_map.get("power_kwh_col") in ["power_kwh", "", None]:
-                pg_map["power_kwh_col"] = "use_power"
-            if pg_map.get("price_won_col") in ["price_won", "", None]:
-                pg_map["price_won_col"] = "use_payment"
-            if pg_map.get("begin_time_col") in ["begin_time", "", None]:
-                pg_map["begin_time_col"] = "start_time"
-            if pg_map.get("end_time_col") in ["end_time", "", None]:
-                pg_map["end_time_col"] = "end_time"
+            if not pg_map.get("table_name"):
+                pg_map["table_name"] = "using_history"
+            pg_map.setdefault("station_name_col", "station_id")
+            pg_map.setdefault("charger_name_col", "charger_no")
+            pg_map.setdefault("power_kwh_col", "use_power")
+            pg_map.setdefault("price_won_col", "use_payment")
+            pg_map.setdefault("begin_time_col", "start_time")
+            pg_map.setdefault("end_time_col", "end_time")
             with open(MAPPING_RULES_PATH, "w", encoding="utf-8") as f:
                 json.dump(rules, f, indent=2, ensure_ascii=False)
-            logging.info("✅ Automatically verified and repaired mapping_rules.json with correct PG columns.")
         except Exception as e:
             logging.warning(f"Error checking {MAPPING_RULES_PATH}: {e}")
 
@@ -200,22 +194,6 @@ def get_mapping_config():
 @app.post("/api/mapping-config")
 def save_mapping_config(mapping_data: dict = Body(...)):
     try:
-        pg_map = mapping_data.setdefault("pg_schema_mapping", {})
-        if pg_map.get("table_name", "").strip() in ["using_history", ""]:
-            pg_map["table_name"] = "using_history"
-            if pg_map.get("station_name_col") in ["station_name", "station", "", None]:
-                pg_map["station_name_col"] = "station_id"
-            if pg_map.get("charger_name_col") in ["charger_name", "charger", "", None]:
-                pg_map["charger_name_col"] = "charger_no"
-            if pg_map.get("begin_time_col") in ["begin_time", "begin", "", None]:
-                pg_map["begin_time_col"] = "start_time"
-            if pg_map.get("end_time_col") in ["end", "", None]:
-                pg_map["end_time_col"] = "end_time"
-            if pg_map.get("power_kwh_col") in ["power_kwh", "power", "", None]:
-                pg_map["power_kwh_col"] = "use_power"
-            if pg_map.get("price_won_col") in ["price_won", "price", "", None]:
-                pg_map["price_won_col"] = "use_payment"
-
         with open(MAPPING_RULES_PATH, "w", encoding="utf-8") as f:
             json.dump(mapping_data, f, indent=2, ensure_ascii=False)
         return {"status": "success", "message": "Schema & column mappings saved successfully!"}
@@ -434,14 +412,8 @@ def get_schema_preview_sample():
             join_sql = f"""
                 SELECT h.*, s.station_name, c.charger_name 
                 FROM {pg_table} h 
-                LEFT JOIN station s ON h.station_id = s.station_id 
-                LEFT JOIN charger c ON (
-                    h.station_id = c.station_id 
-                    AND (
-                        (h.charger_id IS NOT NULL AND h.charger_id != '' AND h.charger_id = c.charger_id AND h.charger_no = c.charger_no)
-                        OR ((h.charger_id IS NULL OR h.charger_id = '') AND h.charger_no = c.charger_no)
-                    )
-                ) 
+                LEFT JOIN station s ON h.{st_col} = s.station_id 
+                LEFT JOIN charger c ON (h.{st_col} = c.station_id AND h.{cp_col} = c.charger_no) 
                 WHERE s.station_name IS NOT NULL 
                 ORDER BY 1 DESC LIMIT 1
             """

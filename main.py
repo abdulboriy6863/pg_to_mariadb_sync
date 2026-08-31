@@ -53,12 +53,21 @@ def main():
         print(f'=== Launching Responsive Web Dashboard on http://0.0.0.0:{args.port} ===')
         print(f'Local URL: http://localhost:{args.port}')
         print(f'Network URL: http://192.168.0.25:{args.port}')
-        uvicorn.run(
-            "src.server:app",
-            host="0.0.0.0",
-            port=args.port,
-            reload=args.reload
-        )
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        uvicorn_kwargs = {
+            "app": "src.server:app",
+            "host": "0.0.0.0",
+            "port": args.port,
+            "reload": args.reload
+        }
+        if args.reload:
+            uvicorn_kwargs["reload_dirs"] = [
+                os.path.join(base_dir, "src"),
+                os.path.join(base_dir, "templates"),
+                os.path.join(base_dir, "static")
+            ]
+            uvicorn_kwargs["reload_excludes"] = ["*.json", "logs/*", "*.log"]
+        uvicorn.run(**uvicorn_kwargs)
 
 if __name__ == '__main__':
     main()

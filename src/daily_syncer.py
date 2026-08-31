@@ -226,8 +226,8 @@ class DailySyncer:
             try:
                 cursor = conn.cursor()
                 select_clause = f"""
-                    SELECT COALESCE(s.station_name, h.{st_col}) AS station_name,
-                           COALESCE(c.charger_name, h.{cp_col}) AS charger_name,
+                    SELECT COALESCE(s.station_name, CAST(h.{st_col} AS VARCHAR)) AS station_name,
+                           COALESCE(c.charger_name, CAST(h.{cp_col} AS VARCHAR)) AS charger_name,
                            CASE WHEN h.start_date IS NOT NULL AND h.start_time IS NOT NULL 
                                 THEN CONCAT(h.start_date, ' ', h.start_time)
                                 ELSE CAST(h.{begin_col} AS VARCHAR) END AS begin_time,
@@ -237,16 +237,11 @@ class DailySyncer:
                            COALESCE(h.use_power, CAST(h.{power_col} AS NUMERIC), 0) AS power_val,
                            COALESCE(h.use_payment, h.{price_col}) AS price_won,
                            h.{card_col} AS card_no,
-                           h.{pay_col} AS pay_type
+                           h.{pay_col} AS pay_type,
+                           h.start_date AS record_start_date
                     FROM {pg_table} h
                     LEFT JOIN station s ON h.{st_col} = s.station_id
-                    LEFT JOIN charger c ON (
-                        h.{st_col} = c.station_id 
-                        AND (
-                            (h.charger_id IS NOT NULL AND h.charger_id != '' AND h.charger_id = c.charger_id AND h.{cp_col} = c.charger_no)
-                            OR ((h.charger_id IS NULL OR h.charger_id = '') AND h.{cp_col} = c.charger_no)
-                        )
-                    )
+                    LEFT JOIN charger c ON (h.{st_col} = c.station_id AND h.{cp_col} = c.charger_no)
                 """
                 if pg_table == "using_history":
                     date_expr = "h.start_date"
@@ -349,6 +344,12 @@ class DailySyncer:
 
             begin_str = safe_str(r.get("begin_time"))
             end_str = safe_str(r.get("end_time"))
+            rec_date = safe_str(r.get("record_start_date")) or (target_dates[0] if target_dates else today_str)
+
+            if begin_str and "-" not in begin_str and rec_date:
+                begin_str = f"{rec_date} {begin_str}".strip()
+            if end_str and "-" not in end_str and rec_date:
+                end_str = f"{rec_date} {end_str}".strip()
 
             raw = f"{cs_id}_{cp_id}_{begin_str}"
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)

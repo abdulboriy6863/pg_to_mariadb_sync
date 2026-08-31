@@ -115,10 +115,16 @@ class LookupService:
         if cache_key in self.cs_cache:
             return self.cs_cache[cache_key]
 
-        res_cs_id = None
+        # 0. Direct numeric cs_id match (if station_name or charger_name is numeric ID)
+        if station_name:
+            s_str = str(station_name).strip()
+            if s_str.isdigit():
+                num_id = int(s_str)
+                if num_id in self.clean_station_map or num_id in self.station_chargers:
+                    res_cs_id = num_id
 
         # 1. Exact match on station_name
-        if station_name:
+        if not res_cs_id and station_name:
             cleaned = self._normalize(station_name)
             if cleaned in self.normalized_station_map:
                 res_cs_id = self.normalized_station_map[cleaned]
@@ -216,10 +222,19 @@ class LookupService:
 
         cleaned = self._normalize(charger_name) if charger_name else ''
         clean_no_noise = self._clean_str(charger_name) if charger_name else ''
-        res_cp_id = None
-        
+        # 0. Direct numeric cp_id match
+        if charger_name:
+            c_str = str(charger_name).strip()
+            if c_str.isdigit():
+                num_cp = int(c_str)
+                chargers_at_cs = self.station_chargers.get(cs_id, [])
+                for cp_id, _ in chargers_at_cs:
+                    if cp_id == num_cp:
+                        res_cp_id = num_cp
+                        break
+
         # 1. Direct match (cs_id, cp_name)
-        if cleaned and (cs_id, cleaned) in self.charger_map:
+        if not res_cp_id and cleaned and (cs_id, cleaned) in self.charger_map:
             res_cp_id = self.charger_map[(cs_id, cleaned)]
             
         # 2. Cleaned without noise match at this station
