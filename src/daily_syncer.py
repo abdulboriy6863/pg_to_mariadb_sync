@@ -194,6 +194,8 @@ class DailySyncer:
 
         pg_table_raw = pg_schema.get("table_name") or pg_cfg.get("table_name") or pg_cfg.get("source_table") or "using_history"
         pg_table = "".join(c for c in str(pg_table_raw) if c.isalnum() or c == '_') or "using_history"
+        if pg_table in ["charging_history", "charge_history", ""]:
+            pg_table = "using_history"
 
         st_col = "".join(c for c in str(pg_schema.get("station_name_col", "station_name")) if c.isalnum() or c == '_') or "station_name"
         cp_col = "".join(c for c in str(pg_schema.get("charger_name_col", "charger_name")) if c.isalnum() or c == '_') or "charger_name"

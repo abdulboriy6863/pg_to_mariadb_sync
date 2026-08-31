@@ -76,8 +76,23 @@ def apply_auto_sync_schedule(auto_sync_cfg=None):
             scheduler.remove_job("daily_sync_job")
             logging.info("🛑 Removed daily_sync_job (Disabled).")
 
+def repair_legacy_config():
+    for p in [CONFIG_PATH, MAPPING_RULES_PATH]:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    txt = f.read()
+                if "charging_history" in txt:
+                    txt = txt.replace('"charging_history"', '"using_history"')
+                    with open(p, "w", encoding="utf-8") as f:
+                        f.write(txt)
+                    logging.info(f"✅ Automatically updated table name to using_history in {p}")
+            except Exception as e:
+                logging.warning(f"Error checking {p}: {e}")
+
 @app.on_event("startup")
 def start_scheduler():
+    repair_legacy_config()
     if not scheduler.running:
         scheduler.start()
     apply_auto_sync_schedule()
