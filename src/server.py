@@ -409,11 +409,39 @@ def get_schema_preview_sample():
     if conn:
         try:
             cursor = conn.cursor()
+            available_cols = set()
+            try:
+                cur_cols = conn.cursor()
+                cur_cols.execute("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = LOWER(%s)
+                      AND table_schema NOT IN ('pg_catalog', 'information_schema');
+                """, (pg_table,))
+                available_cols = {row[0].lower() for row in cur_cols.fetchall()}
+            except Exception:
+                pass
+
+            def resolve_col(requested_col, candidates, default_fallback):
+                req_l = (requested_col or "").lower().strip()
+                if req_l in available_cols:
+                    return req_l
+                for cand in candidates:
+                    if cand.lower() in available_cols:
+                        return cand
+                return default_fallback if available_cols else (requested_col or default_fallback)
+
+            safe_st_col = resolve_col(st_col, ["station_id", "station_name", "station"], "station_id")
+            safe_cp_col = resolve_col(cp_col, ["charger_no", "charger_name", "charger"], "charger_no")
+
+            st_sel = f"h.{safe_st_col}" if safe_st_col in available_cols else "NULL"
+            cp_sel = f"h.{safe_cp_col}" if safe_cp_col in available_cols else "NULL"
+
             join_sql = f"""
                 SELECT h.*, s.station_name, c.charger_name 
                 FROM {pg_table} h 
-                LEFT JOIN station s ON h.{st_col} = s.station_id 
-                LEFT JOIN charger c ON (h.{st_col} = c.station_id AND h.{cp_col} = c.charger_no) 
+                LEFT JOIN station s ON {st_sel} = s.station_id 
+                LEFT JOIN charger c ON ({st_sel} = c.station_id AND {cp_sel} = c.charger_no) 
                 WHERE s.station_name IS NOT NULL 
                 ORDER BY 1 DESC LIMIT 1
             """

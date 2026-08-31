@@ -225,28 +225,98 @@ class DailySyncer:
         if conn:
             try:
                 cursor = conn.cursor()
-                select_clause = f"""
-                    SELECT COALESCE(s.station_name, CAST(h.{st_col} AS VARCHAR)) AS station_name,
-                           COALESCE(c.charger_name, CAST(h.{cp_col} AS VARCHAR)) AS charger_name,
-                           CASE WHEN h.start_date IS NOT NULL AND h.start_time IS NOT NULL 
-                                THEN CONCAT(h.start_date, ' ', h.start_time)
-                                ELSE CAST(h.{begin_col} AS VARCHAR) END AS begin_time,
-                           CASE WHEN h.end_date IS NOT NULL AND h.end_time IS NOT NULL 
-                                THEN CONCAT(h.end_date, ' ', h.end_time)
-                                ELSE CAST(h.{end_col} AS VARCHAR) END AS end_time,
-                           COALESCE(h.use_power, CAST(h.{power_col} AS NUMERIC), 0) AS power_val,
-                           COALESCE(h.use_payment, h.{price_col}) AS price_won,
-                           h.{card_col} AS card_no,
-                           h.{pay_col} AS pay_type,
-                           h.start_date AS record_start_date
-                    FROM {pg_table} h
-                    LEFT JOIN station s ON h.{st_col} = s.station_id
-                    LEFT JOIN charger c ON (h.{st_col} = c.station_id AND h.{cp_col} = c.charger_no)
-                """
-                if pg_table == "using_history":
-                    date_expr = "h.start_date"
+
+                # 1. Dynamically introspect available columns in PostgreSQL table
+                available_cols = set()
+                try:
+                    cur_cols = conn.cursor()
+                    cur_cols.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE LOWER(table_name) = LOWER(%s)
+                          AND table_schema NOT IN ('pg_catalog', 'information_schema');
+                    """, (pg_table,))
+                    available_cols = {row[0].lower() for row in cur_cols.fetchall()}
+                except Exception as e:
+                    logger.warning(f"Could not introspect columns for {pg_table}: {e}")
+
+                def resolve_col(requested_col, candidates, default_fallback):
+                    req_l = (requested_col or "").lower().strip()
+                    if req_l in available_cols:
+                        return req_l
+                    for cand in candidates:
+                        if cand.lower() in available_cols:
+                            return cand
+                    return default_fallback if available_cols else (requested_col or default_fallback)
+
+                actual_st_col = resolve_col(st_col, ["station_id", "station_name", "station", "cs_id"], "station_id")
+                actual_cp_col = resolve_col(cp_col, ["charger_no", "charger_name", "charger", "charger_id", "cp_id"], "charger_no")
+                actual_begin_col = resolve_col(begin_col, ["start_time", "begin_time", "start_date", "begin"], "start_time")
+                actual_end_col = resolve_col(end_col, ["end_time", "finish_time", "end_date", "end"], "end_time")
+                actual_power_col = resolve_col(power_col, ["use_power", "power_kwh", "power", "power_wh"], "use_power")
+                actual_price_col = resolve_col(price_col, ["use_payment", "price_won", "price", "amount", "total_price"], "use_payment")
+                actual_card_col = resolve_col(card_col, ["card_no", "cardno", "card"], "card_no")
+                actual_pay_col = resolve_col(pay_col, ["pay_type", "pay_mode", "roaming_type", "pay"], "pay_type")
+
+                has_start_date = "start_date" in available_cols
+                has_start_time = "start_time" in available_cols
+                has_end_date = "end_date" in available_cols
+                has_end_time = "end_time" in available_cols
+
+                if has_start_date and has_start_time:
+                    begin_expr = "CONCAT(h.start_date, ' ', h.start_time)"
+                elif actual_begin_col in available_cols:
+                    begin_expr = f"CAST(h.{actual_begin_col} AS VARCHAR)"
                 else:
-                    date_expr = f"COALESCE(h.start_date, DATE(h.{begin_col}))"
+                    begin_expr = "''"
+
+                if has_end_date and has_end_time:
+                    end_expr = "CONCAT(h.end_date, ' ', h.end_time)"
+                elif actual_end_col in available_cols:
+                    end_expr = f"CAST(h.{actual_end_col} AS VARCHAR)"
+                else:
+                    end_expr = "''"
+
+                if actual_power_col in available_cols:
+                    power_expr = f"COALESCE(CAST(h.{actual_power_col} AS NUMERIC), 0)"
+                else:
+                    power_expr = "0"
+
+                if actual_price_col in available_cols:
+                    price_expr = f"COALESCE(CAST(h.{actual_price_col} AS NUMERIC), 0)"
+                else:
+                    price_expr = "0"
+
+                card_expr = f"h.{actual_card_col}" if actual_card_col in available_cols else "''"
+                pay_expr = f"h.{actual_pay_col}" if actual_pay_col in available_cols else "''"
+                st_select = f"CAST(h.{actual_st_col} AS VARCHAR)" if actual_st_col in available_cols else "''"
+                cp_select = f"CAST(h.{actual_cp_col} AS VARCHAR)" if actual_cp_col in available_cols else "''"
+
+                if has_start_date:
+                    date_expr = "h.start_date"
+                    rec_date_select = "h.start_date"
+                elif actual_begin_col in available_cols:
+                    date_expr = f"DATE(h.{actual_begin_col})"
+                    rec_date_select = f"DATE(h.{actual_begin_col})"
+                else:
+                    date_expr = "CURRENT_DATE"
+                    rec_date_select = "CURRENT_DATE"
+
+                select_clause = f"""
+                    SELECT COALESCE(s.station_name, {st_select}) AS station_name,
+                           COALESCE(c.charger_name, {cp_select}) AS charger_name,
+                           {begin_expr} AS begin_time,
+                           {end_expr} AS end_time,
+                           {power_expr} AS power_val,
+                           {price_expr} AS price_won,
+                           {card_expr} AS card_no,
+                           {pay_expr} AS pay_type,
+                           {rec_date_select} AS record_start_date
+                    FROM {pg_table} h
+                    LEFT JOIN station s ON {st_select} = s.station_id
+                    LEFT JOIN charger c ON ({st_select} = c.station_id AND {cp_select} = c.charger_no)
+                """
+
                 if is_range_query:
                     cursor.execute(f"{select_clause} WHERE {date_expr} >= %s AND {date_expr} <= %s", (start_date, end_date))
                 elif len(target_dates) == 1:
