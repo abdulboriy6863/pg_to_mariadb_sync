@@ -725,7 +725,15 @@ def get_sync_history():
                 history = json.load(f)
             return history
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            logging.error(f"Error reading sync history: {e}")
+            return []
+    fallback_path = os.path.join(BASE_DIR, "config", "sync_history.json")
+    if os.path.exists(fallback_path):
+        try:
+            with open(fallback_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
     return []
 
 @app.get("/api/sync-progress")
