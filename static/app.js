@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedFile = null;
   let isEditingInlineInputs = false;
   let latestStatus = null;
+  let userSelectedCustomDate = false;
 
   // Track if user is typing in inline inputs to prevent auto-polling overwrite
   ["inlineAutoSyncHour", "inlineAutoSyncMinute", "inlineAutoSyncSecond", "inlineAutoSyncEnabled"].forEach(id => {
@@ -577,7 +578,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Dynamic Yesterday & Max Date Validation Tracker
-  let userSelectedCustomDate = false;
   const pgSyncStartDateInput = document.getElementById("pgSyncStartDate");
   const pgSyncEndDateInput = document.getElementById("pgSyncEndDate");
 
