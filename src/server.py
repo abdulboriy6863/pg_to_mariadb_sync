@@ -435,9 +435,9 @@ def get_schema_preview_sample():
         actual_end_col, raw_end_val = find_val([end_col, "end_time", "stop_time", "end"])
         end_str = str(raw_end_val or "")
 
-    actual_power_col, raw_power = find_val([power_col, "power_kwh", "use_power", "power", "kwh"])
+    actual_power_col, raw_power = find_val([power_col, "power_wh", "use_power", "power", "power_kwh"])
     try:
-        power_num = round(float(raw_power or 0) / 1000.0, 2)
+        power_num = float(raw_power or 0)
     except (ValueError, TypeError):
         power_num = 0.0
 
@@ -504,13 +504,13 @@ def get_schema_preview_sample():
             "badge_text": "✅ Mos keldi" if end_str else "⚠️ Bo'sh"
         },
         {
-            "field_label": "Power (kWh)",
+            "field_label": "Power (Wh)",
             "pg_col": actual_power_col,
             "pg_val": str(raw_power),
             "maria_col": m_power_col,
-            "maria_val": f"{power_num:.2f}",
+            "maria_val": f"{power_num:.1f}",
             "status": "mapped",
-            "badge_text": "✅ FLOAT (kWh)"
+            "badge_text": "⚡ FLOAT (Wh)"
         },
         {
             "field_label": "Price (Won)",
@@ -562,9 +562,9 @@ def get_schema_preview_sample():
             "pg_col": "(Standart)",
             "pg_val": "-",
             "maria_col": "powerUnit",
-            "maria_val": "kWh",
+            "maria_val": "Wh",
             "status": "default",
-            "badge_text": "⚙️ Default: kWh"
+            "badge_text": "⚙️ Default: Wh"
         }
     ]
 

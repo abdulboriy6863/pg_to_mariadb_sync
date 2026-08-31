@@ -99,7 +99,8 @@ class CSVImporter:
 
                 power_str = row.get("충전량(kWh)", "0").strip()
                 try:
-                    power_val = float(power_str)
+                    # Convert CSV kWh to MariaDB native Wh
+                    power_val = round(float(power_str) * 1000.0, 2)
                 except ValueError:
                     power_val = 0.0
 
@@ -133,7 +134,7 @@ class CSVImporter:
                     begin_col: begin_fmt,
                     end_col: end_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     power_col: power_val,
-                    "powerUnit": req_defaults.get("powerUnit", "kWh"),
+                    "powerUnit": req_defaults.get("powerUnit", "Wh"),
                     price_col: price_val,
                     card_col: row.get("카드번호", "").strip(),
                     "startSoc": start_soc,

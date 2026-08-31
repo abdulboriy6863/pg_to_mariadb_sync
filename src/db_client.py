@@ -234,7 +234,7 @@ class MariaDBClient:
             `{card_col}` VARCHAR(64) NULL,
             `modelId` INT(11) DEFAULT 0,
             `connectorId` INT(11) DEFAULT 1,
-            `powerUnit` VARCHAR(16) DEFAULT 'kWh',
+            `powerUnit` VARCHAR(16) DEFAULT 'Wh',
             `startSoc` INT(11) DEFAULT NULL,
             `soc` INT(11) DEFAULT NULL,
             `roamingType` VARCHAR(32) DEFAULT NULL,
