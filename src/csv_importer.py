@@ -48,6 +48,36 @@ class CSVImporter:
         missing_stations = set()
         missing_chargers = set()
 
+        def safe_float(val, default=0.0):
+            if val is None:
+                return default
+            try:
+                if isinstance(val, str):
+                    val = val.replace(",", "").strip()
+                    if not val or val.lower() in ("none", "null"):
+                        return default
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+
+        def safe_int(val, default=0):
+            if val is None:
+                return default
+            try:
+                if isinstance(val, str):
+                    val = val.replace(",", "").strip()
+                    if not val or val.lower() in ("none", "null"):
+                        return default
+                return int(float(val))
+            except (ValueError, TypeError):
+                return default
+
+        def safe_str(val, default=""):
+            if val is None:
+                return default
+            s = str(val).strip()
+            return default if s.lower() in ("none", "null") else s
+
         def _parse_dt(val):
             if not val:
                 return datetime.now()
@@ -97,21 +127,16 @@ class CSVImporter:
                 end_dt = _parse_dt(end_str)
                 begin_fmt = begin_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-                power_str = row.get("충전량(kWh)", "0").strip()
-                try:
-                    # Convert CSV kWh to MariaDB native Wh
-                    power_val = round(float(power_str) * 1000.0, 2)
-                except ValueError:
-                    power_val = 0.0
+                power_str = row.get("충전량(kWh)", "0")
+                raw_power = safe_float(power_str)
+                # Convert CSV kWh to MariaDB native Wh
+                power_val = round(raw_power * 1000.0, 2) if raw_power < 5000.0 else raw_power
 
-                price_str = row.get("충전금액(원)", "0").strip()
-                try:
-                    price_val = int(float(price_str))
-                except ValueError:
-                    price_val = 0
+                price_str = row.get("충전금액(원)", "0")
+                price_val = safe_int(price_str)
 
-                start_soc = int(float(row.get("시작SOC(%)", 0) or 0))
-                finish_soc = int(float(row.get("완료SOC(%)", 0) or 0))
+                start_soc = safe_int(row.get("시작SOC(%)"))
+                finish_soc = safe_int(row.get("완료SOC(%)"))
 
                 tx_id = _gen_tx_id(cs_id, cp_id, begin_fmt)
 
@@ -136,10 +161,10 @@ class CSVImporter:
                     power_col: power_val,
                     "powerUnit": req_defaults.get("powerUnit", "Wh"),
                     price_col: price_val,
-                    card_col: row.get("카드번호", "").strip(),
+                    card_col: safe_str(row.get("카드번호")),
                     "startSoc": start_soc,
                     "soc": finish_soc,
-                    "roamingType": row.get("결제종류", "").strip()
+                    "roamingType": safe_str(row.get("결제종류"))
                 }
 
                 transformed_records.append(record)

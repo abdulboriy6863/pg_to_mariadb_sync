@@ -39,6 +39,36 @@ def update_global_progress(is_running=True, status="processing", total=0, proces
 def get_sync_progress_state():
     return GLOBAL_SYNC_PROGRESS
 
+def safe_float(val, default=0.0):
+    if val is None:
+        return default
+    try:
+        if isinstance(val, str):
+            val = val.replace(",", "").strip()
+            if not val or val.lower() in ("none", "null"):
+                return default
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(val, default=0):
+    if val is None:
+        return default
+    try:
+        if isinstance(val, str):
+            val = val.replace(",", "").strip()
+            if not val or val.lower() in ("none", "null"):
+                return default
+        return int(float(val))
+    except (ValueError, TypeError):
+        return default
+
+def safe_str(val, default=""):
+    if val is None:
+        return default
+    s = str(val).strip()
+    return default if s.lower() in ("none", "null") else s
+
 class DailySyncer:
     def __init__(self, db_config_path=None):
         if db_config_path is None:
@@ -292,8 +322,8 @@ class DailySyncer:
                     update_global_progress(is_running=True, status="transforming", total=total_pg_count, processed=idx, unmapped=total_pg_count - len(transformed), message="Moslashtirilmoqda...")
                 continue
 
-            begin_str = str(r.get("begin_time", ""))
-            end_str = str(r.get("end_time", ""))
+            begin_str = safe_str(r.get("begin_time"))
+            end_str = safe_str(r.get("end_time"))
 
             raw = f"{cs_id}_{cp_id}_{begin_str}"
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)
@@ -309,6 +339,10 @@ class DailySyncer:
             price_col = target_mapping.get("price_col", "totalPrice")
             card_col = target_mapping.get("card_no_col", "cardNo")
 
+            raw_power = safe_float(r.get("power_val"))
+            # Auto convert kWh to Wh if necessary (> 5000 is usually Wh, smaller is usually kWh)
+            power_wh = raw_power if raw_power > 1000.0 else round(raw_power * 1000.0, 2)
+
             rec_item = {
                 tx_col: tx_id,
                 cs_col: cs_id,
@@ -317,11 +351,11 @@ class DailySyncer:
                 "connectorId": 1,
                 begin_col: begin_str,
                 end_col: end_str,
-                power_col: float(r.get("power_val", 0) or 0),
+                power_col: power_wh,
                 "powerUnit": "Wh",
-                price_col: int(float(r.get("price_won", 0))),
-                card_col: str(r.get("card_no", "")),
-                "roamingType": str(r.get("pay_type", "")),
+                price_col: safe_int(r.get("price_won")),
+                card_col: safe_str(r.get("card_no")),
+                "roamingType": safe_str(r.get("pay_type")),
                 "startSoc": 0,
                 "soc": 0
             }
