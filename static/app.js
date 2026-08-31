@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (document.getElementById("pgHost")) document.getElementById("pgHost").value = pg.host || "127.0.0.1";
       if (document.getElementById("pgPort")) document.getElementById("pgPort").value = pg.port || 5432;
       if (document.getElementById("pgDatabase")) document.getElementById("pgDatabase").value = pg.database || "old_charging_db";
-      if (document.getElementById("pgTableName")) document.getElementById("pgTableName").value = pg.table_name || pg.source_table || "charging_history";
+      if (document.getElementById("pgTableName")) document.getElementById("pgTableName").value = pg.table_name || pg.source_table || "using_history";
       if (document.getElementById("pgUser")) document.getElementById("pgUser").value = pg.user || "postgres";
       if (document.getElementById("pgPassword")) document.getElementById("pgPassword").value = pg.password || "";
 
@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pgSchema = mapCfg.pg_schema_mapping || {};
         const mariaTarget = mapCfg.mariadb_target_mapping || {};
 
-        if (document.getElementById("mapPgTable")) document.getElementById("mapPgTable").value = pgSchema.table_name || pg.table_name || "charging_history";
+        if (document.getElementById("mapPgTable")) document.getElementById("mapPgTable").value = pgSchema.table_name || pg.table_name || "using_history";
         if (document.getElementById("mapPgStationCol")) document.getElementById("mapPgStationCol").value = pgSchema.station_name_col || "station_name";
         if (document.getElementById("mapPgChargerCol")) document.getElementById("mapPgChargerCol").value = pgSchema.charger_name_col || "charger_name";
         if (document.getElementById("mapPgBeginCol")) document.getElementById("mapPgBeginCol").value = pgSchema.begin_time_col || "begin_time";
@@ -450,7 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
         transaction_id_col: (document.getElementById("mapMariaTxIdCol")?.value || "transactionId").trim()
       },
       pg_schema_mapping: {
-        table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history").trim(),
+        table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "using_history").trim(),
         station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_name").trim(),
         charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_name").trim(),
         begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "begin_time").trim(),
@@ -1125,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadPgTableColumns(tableName) {
-    const table = tableName || document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "charging_history";
+    const table = tableName || document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "using_history";
     if (!table) return;
 
     try {

@@ -233,7 +233,7 @@ def validate_schema():
     pg_status = pg_client.test_connection()
     pg_connected = pg_status.get("status") in ["online", "success"]
     pg_table_ok = False
-    pg_table = "charging_history"
+    pg_table = "using_history"
     pg_cols_names = []
     pg_matched_cols = []
     pg_missing_cols = []
@@ -244,7 +244,7 @@ def validate_schema():
             with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
                 rules = json.load(f)
                 pg_mapping = rules.get("pg_schema_mapping", {})
-                pg_table = pg_mapping.get("table_name", "charging_history")
+                pg_table = pg_mapping.get("table_name", "using_history")
                 pg_cols = pg_client.get_table_columns(pg_table)
                 pg_cols_names = [c.get("column_name", "") for c in pg_cols]
                 pg_table_ok = len(pg_cols) > 0
@@ -296,7 +296,7 @@ def validate_schema():
             recommendations["reason"] = f"PG `{pg_table}` jadvali Quvvatlash Tarixi sohasi."
 
         if maria_domain == "charge_history":
-            recommendations["rec_pg_table"] = "charging_history"
+            recommendations["rec_pg_table"] = "using_history"
         elif maria_domain == "tariff_price":
             recommendations["rec_pg_table"] = "unit_price_time"
 
@@ -351,7 +351,7 @@ def get_schema_preview_sample():
     maria_mapping = rules.get("mariadb_target_mapping", {})
     custom_maps = rules.get("custom_mappings", {})
 
-    pg_table = pg_mapping.get("table_name", "charging_history")
+    pg_table = pg_mapping.get("table_name", "using_history")
     maria_table = maria_mapping.get("table_name", "TCSP_CHARGE_HIST")
 
     st_col = pg_mapping.get("station_name_col", "station_name")
