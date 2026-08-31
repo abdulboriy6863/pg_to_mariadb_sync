@@ -873,6 +873,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const modeText = dryRun ? (isKo ? "Dry-Run 테스트" : "Dry-Run Sinov") : (isKo ? "실제 DB 동기화" : "Real Bazaga Sync");
     appendLog(isKo ? `PostgreSQL 데일리 동기화 시작 (${modeText}) | 날짜: ${rangeLabel}...` : `PostgreSQL Daily Sync boshlandi (${modeText}) | Sana: ${rangeLabel}...`, "info");
 
+    const btnDry = document.getElementById("btnPgDryRun");
+    const btnLive = document.getElementById("btnPgLiveRun");
+    if (btnDry) btnDry.disabled = true;
+    if (btnLive) btnLive.disabled = true;
+
+    const progressBox = document.getElementById("syncProgressContainer");
+    const progressBar = document.getElementById("syncProgressBar");
+    const progressPercent = document.getElementById("syncProgressPercent");
+    const progressMsg = document.getElementById("syncProgressMessage");
+    const progressProc = document.getElementById("syncProgressProcessed");
+    const progressIns = document.getElementById("syncProgressInserted");
+    const progressDup = document.getElementById("syncProgressDuplicates");
+    const progressUnmap = document.getElementById("syncProgressUnmapped");
+
+    if (progressBox) progressBox.style.display = "block";
+    if (progressBar) progressBar.style.width = "0%";
+    if (progressPercent) progressPercent.textContent = "0.0%";
+    if (progressMsg) progressMsg.textContent = isKo ? "데이터베이스 조회 준비 중..." : "Baza so'rovi tayyorlanmoqda...";
+
     try {
       const formData = new FormData();
       formData.append("dry_run", dryRun);
@@ -883,31 +902,94 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         body: formData
       });
-      const result = await res.json();
+      const initialRes = await res.json();
 
-      if (result.status === "success") {
-        const totalPg = result.total_pg_records !== undefined ? result.total_pg_records : (result.count ?? 0);
-        const inserted = result.inserted ?? 0;
-        const dupes = result.duplicates_skipped ?? 0;
-        const transformed = result.transformed_count ?? 0;
-        const unmapped = result.unmapped_count ?? 0;
-
-        if (totalPg === 0) {
-          appendLog(isKo ? `ℹ️ PostgreSQL DB에서 (${result.target_date || rangeLabel}) 날짜의 데이터가 없습니다 (0건).` : `ℹ️ PostgreSQL bazasida (${result.target_date || rangeLabel}) sanalari bo'yicha ma'lumot topilmadi (0 ta yozuv).`, "info");
-        } else if (dryRun) {
-          appendLog(isKo ? `✅ Dry-Run 결과 (${result.target_date}): 총 PG: ${totalPg}건 | 변환완료: ${transformed}건 | 미매핑: ${unmapped}건` : `✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${totalPg} | Transformed: ${transformed} | Unmapped: ${unmapped}`, "success");
-        } else {
-          appendLog(isKo ? `🚀 실제 동기화 결과 (${result.target_date}): 총 PG: ${totalPg}건 | 저장됨: ${inserted}건 | 중복 제외: ${dupes}건` : `🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
-          fetchStatus();
-        }
-        if (result.missing_stations && result.missing_stations.length > 0) {
-          appendLog((isKo ? "⚠️ 미매핑 충전소: " : "⚠️ Topilmagan stansiyalar: ") + result.missing_stations.join(", "), "warn");
-        }
-      } else {
-        appendLog((isKo ? "⚠️ 동기화 실패: " : "⚠️ Daily sync natijasi: ") + (result.message || 'Error occurred'), "error");
+      if (res.status === 409) {
+        appendLog((isKo ? "⚠️ 진행 중인 작업 있음: " : "⚠️ Jarayon band: ") + initialRes.message, "warn");
+        if (btnDry) btnDry.disabled = false;
+        if (btnLive) btnLive.disabled = false;
+        return;
       }
+
+      if (!res.ok && initialRes.status === "error") {
+        appendLog((isKo ? "⚠️ 동기화 오류: " : "⚠️ Sinxronizatsiya xatoligi: ") + (initialRes.message || 'Error occurred'), "error");
+        if (progressBox) progressBox.style.display = "none";
+        if (btnDry) btnDry.disabled = false;
+        if (btnLive) btnLive.disabled = false;
+        return;
+      }
+
+      // Real-time Polling Loop
+      let pollInterval = setInterval(async () => {
+        try {
+          const progRes = await fetch("/api/sync-progress");
+          if (!progRes.ok) return;
+          const progData = await progRes.json();
+
+          const pct = Math.min(100, (progData.percentage || 0)).toFixed(1);
+          if (progressBar) progressBar.style.width = `${pct}%`;
+          if (progressPercent) progressPercent.textContent = `${pct}%`;
+          if (progressMsg) progressMsg.textContent = progData.message || (isKo ? "진행 중..." : "Jarayonda...");
+
+          const total = progData.total || 0;
+          const proc = progData.processed || 0;
+          const ins = progData.inserted || 0;
+          const dup = progData.duplicates || 0;
+          const unmap = progData.unmapped || 0;
+
+          if (progressProc) progressProc.textContent = isKo ? `📋 진행: ${proc}/${total}건` : `📋 Bajarildi: ${proc}/${total} ta`;
+          if (progressIns) progressIns.textContent = isKo ? `✅ 저장: ${ins}건` : `✅ Kiritildi: ${ins}`;
+          if (progressDup) progressDup.textContent = isKo ? `🔁 중복: ${dup}건` : `🔁 Dublikat: ${dup}`;
+          if (progressUnmap) progressUnmap.textContent = isKo ? `⚠️ 미매핑: ${unmap}건` : `⚠️ Mos kelmadi: ${unmap}`;
+
+          if (!progData.is_running) {
+            clearInterval(pollInterval);
+            if (btnDry) btnDry.disabled = false;
+            if (btnLive) btnLive.disabled = false;
+
+            // Fetch final detailed result
+            const resultRes = await fetch("/api/sync-result");
+            const result = await resultRes.json();
+
+            if (result && result.status === "success") {
+              const totalPg = result.total_pg_records !== undefined ? result.total_pg_records : (result.count ?? total);
+              const inserted = result.inserted ?? ins;
+              const dupes = result.duplicates_skipped ?? dup;
+              const transformed = result.transformed_count ?? (totalPg - unmap);
+              const unmapped = result.unmapped_count ?? unmap;
+
+              if (totalPg === 0) {
+                appendLog(isKo ? `ℹ️ PostgreSQL DB에서 (${result.target_date || rangeLabel}) 날짜의 데이터가 없습니다 (0건).` : `ℹ️ PostgreSQL bazasida (${result.target_date || rangeLabel}) sanalari bo'yicha ma'lumot topilmadi (0 ta yozuv).`, "info");
+              } else if (dryRun) {
+                appendLog(isKo ? `✅ Dry-Run 완료 (${result.target_date}): 총 PG: ${totalPg}건 | 변환완료: ${transformed}건 | 미매핑: ${unmapped}건` : `✅ Dry-Run Natijasi (${result.target_date}): Jami PG: ${totalPg} | Transformed: ${transformed} | Unmapped: ${unmapped}`, "success");
+              } else {
+                appendLog(isKo ? `🚀 실제 동기화 완료 (${result.target_date}): 총 PG: ${totalPg}건 | 저장됨: ${inserted}건 | 중복 제외: ${dupes}건` : `🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
+                fetchStatus();
+                fetchSyncHistory();
+              }
+
+              if (result.missing_stations && result.missing_stations.length > 0) {
+                appendLog((isKo ? "⚠️ 미매핑 충전소: " : "⚠️ Topilmagan stansiyalar: ") + result.missing_stations.join(", "), "warn");
+              }
+            } else if (result && result.status === "error") {
+              appendLog((isKo ? "⚠️ 동기화 실패: " : "⚠️ Sinxronizatsiya xatosi: ") + (result.message || 'Xatolik yuz berdi'), "error");
+            }
+
+            // Hide progress container after 4 seconds
+            setTimeout(() => {
+              if (progressBox) progressBox.style.display = "none";
+            }, 4000);
+          }
+        } catch (pollErr) {
+          console.warn("Progress poll error:", pollErr);
+        }
+      }, 800);
+
     } catch (err) {
       appendLog((isKo ? "서버 오류: " : "Daily sync server xatoligi: ") + err.message, "error");
+      if (btnDry) btnDry.disabled = false;
+      if (btnLive) btnLive.disabled = false;
+      if (progressBox) progressBox.style.display = "none";
     }
   }
 

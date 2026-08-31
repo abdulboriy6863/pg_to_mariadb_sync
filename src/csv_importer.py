@@ -76,7 +76,7 @@ class CSVImporter:
                 station_name = row.get(station_col)
                 charger_name = row.get(charger_col)
 
-                cs_id = self.lookup_service.get_cs_id(station_name)
+                cs_id = self.lookup_service.get_cs_id(station_name, charger_name)
                 if not cs_id:
                     missing_cs_count += 1
                     if station_name:

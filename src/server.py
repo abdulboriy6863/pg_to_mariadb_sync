@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import json
+import threading
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -693,6 +694,25 @@ def upload_csv(
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
+LAST_SYNC_RESULT = {"result": None}
+
+def run_sync_worker(start_date, end_date, target_date, lookback_days, dry_run):
+    try:
+        syncer = DailySyncer()
+        res = syncer.sync_daily_data(
+            start_date=start_date,
+            end_date=end_date,
+            target_date=target_date,
+            lookback_days=lookback_days,
+            dry_run=dry_run
+        )
+        LAST_SYNC_RESULT["result"] = res
+    except Exception as e:
+        logging.error(f"Background sync worker error: {e}")
+        from src.daily_syncer import update_global_progress
+        update_global_progress(is_running=False, status="error", message=f"Xatolik: {e}")
+        LAST_SYNC_RESULT["result"] = {"status": "error", "message": str(e)}
+
 @app.post("/api/daily-sync")
 def trigger_daily_sync(
     start_date: str = Form(None),
@@ -701,21 +721,42 @@ def trigger_daily_sync(
     lookback_days: int = Form(None),
     dry_run: bool = Form(True)
 ):
-    try:
-        syncer = DailySyncer()
-        result = syncer.sync_daily_data(
-            start_date=start_date if start_date else None,
-            end_date=end_date if end_date else None,
-            target_date=target_date if target_date else None,
-            lookback_days=lookback_days,
-            dry_run=dry_run
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
+    current_state = get_sync_progress_state()
+    if current_state.get("is_running", False):
         return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": f"Daily sync error: {str(e)}"}
+            status_code=409,
+            content={
+                "status": "busy",
+                "is_running": True,
+                "message": "Boshqa sinxronizatsiya jarayoni hozirda fonda ishlamoqda. Iltimos kuting."
+            }
         )
+
+    s_date = start_date if start_date else None
+    e_date = end_date if end_date else None
+    t_date = target_date if target_date else None
+
+    LAST_SYNC_RESULT["result"] = None
+
+    thread = threading.Thread(
+        target=run_sync_worker,
+        args=(s_date, e_date, t_date, lookback_days, dry_run),
+        daemon=True
+    )
+    thread.start()
+
+    date_label = f"{s_date} ~ {e_date}" if (s_date and e_date) else (s_date or e_date or t_date or "Daily")
+    return JSONResponse(content={
+        "status": "started",
+        "is_running": True,
+        "mode": "dry_run" if dry_run else "live",
+        "target_date": date_label,
+        "message": "Sinxronizatsiya fonda boshlandi..."
+    })
+
+@app.get("/api/sync-result")
+def get_sync_result():
+    return JSONResponse(content=LAST_SYNC_RESULT.get("result") or {})
 
 @app.get("/api/sync-history")
 def get_sync_history():

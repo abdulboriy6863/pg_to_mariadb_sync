@@ -276,7 +276,7 @@ class DailySyncer:
             st_name = r.get("station_name")
             cp_name = r.get("charger_name")
 
-            cs_id = self.lookup_service.get_cs_id(st_name)
+            cs_id = self.lookup_service.get_cs_id(st_name, cp_name)
             if not cs_id:
                 if st_name:
                     missing_stations.add(st_name)
