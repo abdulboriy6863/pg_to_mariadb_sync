@@ -224,7 +224,13 @@ class DailySyncer:
                            h.{pay_col} AS pay_type
                     FROM {pg_table} h
                     LEFT JOIN station s ON h.{st_col} = s.station_id
-                    LEFT JOIN charger c ON (h.{st_col} = c.station_id AND (h.{cp_col} = c.charger_no OR h.{cp_col} = c.charger_id))
+                    LEFT JOIN charger c ON (
+                        h.{st_col} = c.station_id 
+                        AND (
+                            (h.charger_id IS NOT NULL AND h.charger_id != '' AND h.charger_id = c.charger_id AND h.{cp_col} = c.charger_no)
+                            OR ((h.charger_id IS NULL OR h.charger_id = '') AND h.{cp_col} = c.charger_no)
+                        )
+                    )
                 """
                 date_expr = f"COALESCE(h.start_date, DATE(h.{begin_col}))"
                 if is_range_query:

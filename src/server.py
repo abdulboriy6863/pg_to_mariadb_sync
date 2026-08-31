@@ -381,7 +381,13 @@ def get_schema_preview_sample():
                 SELECT h.*, s.station_name, c.charger_name 
                 FROM {pg_table} h 
                 LEFT JOIN station s ON h.station_id = s.station_id 
-                LEFT JOIN charger c ON (h.station_id = c.station_id AND (h.charger_no = c.charger_no OR h.charger_id = c.charger_id)) 
+                LEFT JOIN charger c ON (
+                    h.station_id = c.station_id 
+                    AND (
+                        (h.charger_id IS NOT NULL AND h.charger_id != '' AND h.charger_id = c.charger_id AND h.charger_no = c.charger_no)
+                        OR ((h.charger_id IS NULL OR h.charger_id = '') AND h.charger_no = c.charger_no)
+                    )
+                ) 
                 WHERE s.station_name IS NOT NULL 
                 ORDER BY 1 DESC LIMIT 1
             """
