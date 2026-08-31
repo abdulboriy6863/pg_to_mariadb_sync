@@ -930,7 +930,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           appendLog(isKo ? `🚀 실제 동기화 완료 (${result.target_date}): 총 PG: ${totalPg}건 | 저장됨: ${inserted}건 | 중복 제외: ${dupes}건` : `🚀 Real Sync Natijasi (${result.target_date}): Jami PG: ${totalPg} | Kiritildi: ${inserted} | Dublikat: ${dupes}`, "success");
           fetchStatus();
-          fetchSyncHistory();
         }
 
         if (result.missing_stations && result.missing_stations.length > 0) {
