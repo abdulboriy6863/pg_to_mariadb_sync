@@ -49,10 +49,12 @@ def main():
         print('Import Result:', result)
 
     else:
-        print(f'=== Launching Responsive Web Dashboard on http://0.0.0.0:{args.port} ===')
-        print(f'Local URL: http://localhost:{args.port}')
-        print(f'Network URL: http://192.168.0.25:{args.port}')
-        uvicorn.run("src.server:app", host="0.0.0.0", port=args.port, reload=True)
+        uvicorn.run(
+            "src.server:app",
+            host="0.0.0.0",
+            port=args.port,
+            reload=False
+        )
 
 if __name__ == '__main__':
     main()
