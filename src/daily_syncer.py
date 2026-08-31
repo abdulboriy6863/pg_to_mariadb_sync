@@ -211,6 +211,10 @@ class DailySyncer:
                 st_col = "station_id"
             if cp_col in ["charger_name", "charger", ""]:
                 cp_col = "charger_no"
+            if begin_col in ["begin_time", "begin", ""]:
+                begin_col = "start_time"
+            if end_col in ["end", ""]:
+                end_col = "end_time"
             if power_col in ["power_kwh", "power", ""]:
                 power_col = "use_power"
             if price_col in ["price_won", "price", ""]:
@@ -244,7 +248,10 @@ class DailySyncer:
                         )
                     )
                 """
-                date_expr = f"COALESCE(h.start_date, DATE(h.{begin_col}))"
+                if pg_table == "using_history":
+                    date_expr = "h.start_date"
+                else:
+                    date_expr = f"COALESCE(h.start_date, DATE(h.{begin_col}))"
                 if is_range_query:
                     cursor.execute(f"{select_clause} WHERE {date_expr} >= %s AND {date_expr} <= %s", (start_date, end_date))
                 elif len(target_dates) == 1:

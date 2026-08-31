@@ -116,12 +116,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const mariaTarget = mapCfg.mariadb_target_mapping || {};
 
         if (document.getElementById("mapPgTable")) document.getElementById("mapPgTable").value = pgSchema.table_name || pg.table_name || "using_history";
-        if (document.getElementById("mapPgStationCol")) document.getElementById("mapPgStationCol").value = pgSchema.station_name_col || "station_name";
-        if (document.getElementById("mapPgChargerCol")) document.getElementById("mapPgChargerCol").value = pgSchema.charger_name_col || "charger_name";
-        if (document.getElementById("mapPgBeginCol")) document.getElementById("mapPgBeginCol").value = pgSchema.begin_time_col || "begin_time";
+        if (document.getElementById("mapPgStationCol")) document.getElementById("mapPgStationCol").value = pgSchema.station_name_col || "station_id";
+        if (document.getElementById("mapPgChargerCol")) document.getElementById("mapPgChargerCol").value = pgSchema.charger_name_col || "charger_no";
+        if (document.getElementById("mapPgBeginCol")) document.getElementById("mapPgBeginCol").value = pgSchema.begin_time_col || "start_time";
         if (document.getElementById("mapPgEndCol")) document.getElementById("mapPgEndCol").value = pgSchema.end_time_col || "end_time";
-        if (document.getElementById("mapPgPowerCol")) document.getElementById("mapPgPowerCol").value = pgSchema.power_kwh_col || "power_kwh";
-        if (document.getElementById("mapPgPriceCol")) document.getElementById("mapPgPriceCol").value = pgSchema.price_won_col || "price_won";
+        if (document.getElementById("mapPgPowerCol")) document.getElementById("mapPgPowerCol").value = pgSchema.power_kwh_col || "use_power";
+        if (document.getElementById("mapPgPriceCol")) document.getElementById("mapPgPriceCol").value = pgSchema.price_won_col || "use_payment";
         if (document.getElementById("mapPgCardCol")) document.getElementById("mapPgCardCol").value = pgSchema.card_no_col || "card_no";
         if (document.getElementById("mapPgPayCol")) document.getElementById("mapPgPayCol").value = pgSchema.pay_type_col || "pay_type";
         
@@ -451,12 +451,12 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       pg_schema_mapping: {
         table_name: (document.getElementById("mapPgTable")?.value || document.getElementById("pgTableName")?.value || "using_history").trim(),
-        station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_name").trim(),
-        charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_name").trim(),
-        begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "begin_time").trim(),
+        station_name_col: (document.getElementById("mapPgStationCol")?.value || "station_id").trim(),
+        charger_name_col: (document.getElementById("mapPgChargerCol")?.value || "charger_no").trim(),
+        begin_time_col: (document.getElementById("mapPgBeginCol")?.value || "start_time").trim(),
         end_time_col: (document.getElementById("mapPgEndCol")?.value || "end_time").trim(),
-        power_kwh_col: (document.getElementById("mapPgPowerCol")?.value || "power_kwh").trim(),
-        price_won_col: (document.getElementById("mapPgPriceCol")?.value || "price_won").trim(),
+        power_kwh_col: (document.getElementById("mapPgPowerCol")?.value || "use_power").trim(),
+        price_won_col: (document.getElementById("mapPgPriceCol")?.value || "use_payment").trim(),
         card_no_col: (document.getElementById("mapPgCardCol")?.value || "card_no").trim(),
         pay_type_col: (document.getElementById("mapPgPayCol")?.value || "pay_type").trim()
       }
@@ -1174,14 +1174,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const pgInputs = [
-      { id: "mapPgStationCol", kw: ["station", "cs_name", "biz"], def: "station_name" },
-      { id: "mapPgChargerCol", kw: ["charger", "cp_name", "cp"], def: "charger_name" },
-      { id: "mapPgBeginCol", kw: ["begin", "start"], def: "begin_time" },
-      { id: "mapPgEndCol", kw: ["end", "finish", "stop"], def: "end_time" },
-      { id: "mapPgPowerCol", kw: ["power", "kwh", "watt", "energy"], def: "power_kwh" },
-      { id: "mapPgPriceCol", kw: ["price", "won", "amount", "total", "cost"], def: "price_won" },
-      { id: "mapPgCardCol", kw: ["card", "cardno"], def: "card_no" },
-      { id: "mapPgPayCol", kw: ["pay", "type", "roaming"], def: "pay_type" }
+      { id: "mapPgStationCol", kw: ["station_id", "station", "cs_name"], def: "station_id" },
+      { id: "mapPgChargerCol", kw: ["charger_no", "charger", "cp_name"], def: "charger_no" },
+      { id: "mapPgBeginCol", kw: ["start_time", "begin", "start"], def: "start_time" },
+      { id: "mapPgEndCol", kw: ["end_time", "end", "finish"], def: "end_time" },
+      { id: "mapPgPowerCol", kw: ["use_power", "power", "kwh"], def: "use_power" },
+      { id: "mapPgPriceCol", kw: ["use_payment", "price", "won"], def: "use_payment" },
+      { id: "mapPgCardCol", kw: ["card_no", "card"], def: "card_no" },
+      { id: "mapPgPayCol", kw: ["pay_type", "pay"], def: "pay_type" }
     ];
 
     let matchedCount = 0;
