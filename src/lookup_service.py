@@ -115,6 +115,8 @@ class LookupService:
         if cache_key in self.cs_cache:
             return self.cs_cache[cache_key]
 
+        res_cs_id = None
+
         # 0. Direct numeric cs_id match (if station_name or charger_name is numeric ID)
         if station_name:
             s_str = str(station_name).strip()
@@ -222,6 +224,8 @@ class LookupService:
 
         cleaned = self._normalize(charger_name) if charger_name else ''
         clean_no_noise = self._clean_str(charger_name) if charger_name else ''
+        res_cp_id = None
+
         # 0. Direct numeric cp_id match
         if charger_name:
             c_str = str(charger_name).strip()
