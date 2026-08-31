@@ -1,102 +1,77 @@
-# AI Uchun Haftalik Hisobot Yozish Qo'llanmasi va Standart Shablon 📋
+# 🌐 GLOBAL AI WEEKLY REPORT FRAMEWORK (Universal Qo'llanma) 📑
 
-Ushbu hujjat **har payshanba kuni rahbariyatga (dasturlashdan xabari bo'lmagan rahbarlar va menejerlarga) beriladigan haftalik hisobotlarni** shakllantirish uchun maxsus yo'riqnomadir.
+Ushbu hujjat **har qanday dasturlash loyihasi, yangi tizim yoki texnik vazifa** bo'yicha haftalik hisobotlarni (har payshanba kuni rahbariyatga, investorlarga yoki no-tech menejerlarga) sodda, tushunarli va professional tilda shakllantirish uchun **Universal Qo'llanma va AI Prompt Qoidasi** hisoblanadi.
+
+---
 
 > [!IMPORTANT]
-> **AI AGENTLAR UCHUN KO'RSATMA:**
-> Foydalanuvchi sizdan *"Obsidian dagi report qoidasiga qarab hozir qilgan ishimiz bo'yicha hisobot yoz"* deb so'raganda, siz ushbu hujjatdagi qoidalarga 100% amal qilgan holda, dasturchi bo'lmagan inson ham bir o'qishda tushunadigan, biznesga foydasi aniq ko'rsatilgan hisobot tayyorlab berishingiz SHART.
+> ### 🤖 BARCHA AI AGENTLAR UCHUN ASOSIY YO'RIQNOMA:
+> Foydalanuvchi sizga: **"Obsidian dagi report qo'llanmasiga qarab qilgan ishimiz bo'yicha hisobot yozib ber"** deganida:
+> 1. Suhbat davomida qilingan barcha texnik ishlarni (kod, arxitektura, tuzatishlar) tahlil qiling.
+> 2. Texnik so'zlarni (kod qatorlari, funksiyalar, kutubxonalar) **mutlaqo dasturchi bo'lmagan odam tushunadigan biznes foydasiga** o'giring.
+> 3. Quyidagi **4 bo'limli universal shablon** asosida chiroyli, aniq va topshirishga tayyor hisobot tuzing.
 
 ---
 
-## 1. Dasturchi Bo'lmagan Odam Uchun Hisobot Yozish Qoidalari (Core Rules)
+## 1. 🧠 Texnik Tildan No-Tech (Biznes) Tiliga O'girish Lug'ati (Universal Translation Matrix)
 
-1. **Texnik atamalarni hayotiy / biznes tiliga o'giring:**
-   * ❌ *Yomon (Juda texnik):* `"safe_float() va regex matching qo'shildi, float(None) Type casting xatosi tuzatildi, TINF_CS bilan JOIN qilindi."`
-   * ✅ *Yaxshi (No-tech / Tushunarli):* `"Eski yillardagi (2020-2023) bepul yoki to'lovsiz qolib ketgan cheklardagi ma'lumotlar xatosi to'liq bartaraf etildi. Barcha zaryadlash stansiyalari o'zining haqiqiy manzili va zaryadlovchi ustuniga 100% to'g'ri biriktirildi."`
+Har qanday loyihada texnik so'zlarni quyidagi ma'nolarga almashtiring:
 
-2. **Har doim 3 ta asosiy savolga javob bering:**
-   * **Nima ish qilindi?** (Bajarilgan vazifa)
-   * **Nima uchun qilindi va nima muammo hal bo'ldi?** (Biznes sababi)
-   * **Qanday aniq natijaga erishildi?** (Raqamlar, foizlar, tejalgan vaqt, xavfsizlik)
-
-3. **Aniq raqamlar va natijalarni ko'rsating (Impact):**
-   * Masalan: *"859,892 ta zaryadlash ma'lumotlari 100% to'liq va yo'qotishlarsiz ko'chirishga tayyorlandi."*
-   * *"Har kuni tungi 02:00 da inson omilisiz avtomatik yangilanadigan tizim ishga tushirildi."*
-
-4. **Tuzilmani ixcham va ko'zga yoqimli qiling:**
-   * Qisqa sarlavhalar, belgilangan ro'yxatlar (bullet points) va emojilardan me'yorida foydalaning.
+| Qilingan Texnik Ish (Backend/Frontend/DevOps) | Rahbariyat / Biznes Uchun Tushunarli Tilda |
+|---|---|
+| **Bug Fix / Exception Handling (`TypeError`, crash)** | *"Tizimning to'xtab qolish xatolari bartaraf etildi, dastur barqarorligi va ishonchliligi oshirildi."* |
+| **Database Migration / ETL / Sync** | *"Eski tizimdagi barcha ma'lumotlar yangi bazaga birorta ham yo'qotishsiz va xavfsiz ko'chirildi."* |
+| **Automation / Cron Job / Batch Script** | *"Inson aralashuvisiz har kuni o'z vaqtida avtomatik ishlaydigan xizmat yaratildi (qo'lda bajarish bekor qilindi, vaqt tejandi)."* |
+| **Optimization / Performance / Query Tuning** | *"Tizimning ishlash tezligi 5-10 barobarga oshirildi, server yuklamasi sezilarli darajada yengillashtirildi."* |
+| **Web UI / Dashboard / Frontend** | *"Barcha jarayonlarni brauzer orqali bir tugma bilan boshqarish va real vaqtda jonli kuzatish imkoniyati yaratildi."* |
+| **ID Resolution / Entity Mapping / Lookup** | *"Turli nomlar va tizimlar o'rtasidagi noaniqliklar bartaraf etilib, barcha ma'lumotlar o'zining to'g'ri manziliga 100% aniqlikda biriktirildi."* |
+| **Security / Idempotency / Deduplication** | *"Ma'lumotlarning takrorlanishi (dublikat bo'lishi) va noxush to'qnashuvlarning oldi olinib, xavfsizlik ta'minlandi."* |
+| **API Integration / Microservices** | *"Alohida tizimlar o'rtasida ma'lumotlarning uzluksiz va xavfsiz almashinuvi yo'lga qo'yildi."* |
 
 ---
 
-## 2. Standart Haftalik Hisobot Shabloni (Weekly Report Template)
+## 2. 📋 Universal Haftalik Hisobot Shabloni (Har Qanday Loyiha Uchun)
 
-Har bir haftalik hisobot quyidagi 4 ta bo'limdan iborat bo'lishi kerak:
+AI hisobot yozishda faqat ushbu 4 ta bo'limdan foydalanadi:
 
 ```markdown
-# 📑 Haftalik Ish Hisoboti (Sana: YYYY-MM-DD)
-**Mas'ul xodim:** Abdulboriy
-**Loyiha:** [Loyiha nomi, masalan: PostgreSQL to MariaDB Data Sync & Migration System]
+# 📑 Haftalik Ish Hisoboti
+📅 **Sana:** [Bugungi sana: YYYY-MM-DD]
+👤 **Mas'ul xodim:** Abdulboriy
+🚀 **Loyiha / Tizim:** [Loyiha nomi]
 
 ---
 
 ### 1. 🎯 Haftaning Asosiy Maqsadi va Biznes Qiymati
-* [Bu hafta qilingan ishlar kompaniyaga nima foyda berishi haqida 1-2 gap]
+* [Bu hafta qilingan ishlar kompaniyaga, xodimlarga yoki mijozlarga qanday foyda keltirishi haqida 1-2 gap]
 
 ---
 
-### 2. ✅ Bajarilgan Asosiy Ishlar (Oddiy Tilda)
-* **[Vazifa 1 Nomi]:** [Nima qilingani va qanday qulaylik yaratilgani]
-* **[Vazifa 2 Nomi]:** [Qanday xatolik yoki muammo yechilgani]
-* **[Vazifa 3 Nomi]:** [Yaratilgan avtomatlashtirish yoki qulaylik]
+### 2. ✅ Bajarilgan Asosiy Ishlar (Oddiy va Londa Tilda)
+1. **[1-Asosiy Ish Nomi]:**
+   * [Nima qilindi, qanday qulaylik yaratildi yoki qanday muammo yechildi]
+2. **[2-Asosiy Ish Nomi]:**
+   * [Jarayon qanday osonlashtirildi yoki qanday avtomatlashtirildi]
+3. **[3-Asosiy Ish Nomi]:**
+   * [Qanday yangi imkoniyat yoki boshqaruv funksiyasi qo'shildi]
 
 ---
 
-### 3. 📊 Erishilgan Aniq Natijalar va Raqamlar
-* **Ma'lumotlar aniqligi:** [Masalan: 100% (0 ta yo'qotish)]
-* **Qamrab olingan davr:** [Masalan: 2020-yildan 2026-yilgacha bo'lgan barcha tarixiy ma'lumotlar]
-* **Avtomatlashtirish:** [Masalan: Tungi avtomatik sinxronizatsiya va monitoring paneli faol]
-
----
-
-### 4. 🔜 Kelgusi Hafta Rejalari
-* [Keyingi bosqichda nima qilinishi rejalashtirilgan]
-```
-
----
-
-## 3. Namuna: Hozirgi Tizim Bo'yicha Real Hisobot Misoli
-
-```markdown
-# 📑 Haftalik Ish Hisoboti (2026-08-31)
-**Mas'ul xodim:** Abdulboriy
-**Loyiha:** PostgreSQL dan MariaDB ga Zaryadlash Tarixini Ko'chirish va Kunlik Avtomatik Sinxronizatsiya Tizimi
-
----
-
-### 1. 🎯 Haftaning Asosiy Maqsadi
-Eski serverdagi barcha tarixiy elektromobil zaryadlash seanslari va to'lov hisobotlarini yangi MariaDB tizimiga birorta ham ma'lumot yo'qotmasdan, xavfsiz va avtomatlashtirilgan tarzda o'tkazish.
-
----
-
-### 2. ✅ Bajarilgan Asosiy Ishlar
-1. **Eski Yillardagi Ma'lumotlar Xatoliklari Bartaraf Etildi:**
-   * 2020–2023 yillardagi bekor qilingan yoki to'lovsiz zaryadlash seanslaridagi bo'sh qiymatlar sababli to'xtab qolish xatolari to'liq bartaraf qilindi.
-2. **Stansiyalar va Zaryadlovchi Qurilmalarni Intellektual Moslashtirish:**
-   * Stansiyalar nomlaridagi noaniqliklar (masalan, korxona va pudratchi nomlari ostida yozilgan zaryadlovchilar) to'g'rilanib, ularning har biri yangi tizimdagi o'zining haqiqiy fizik manzili va ustuniga 100% to'g'ri bog'landi.
-3. **Kunlik Avtomatik Yangilanish (Batch Sync) Yo'lga Qo'yildi:**
-   * Har kuni inson aralashuvisiz, belgilangan vaqtda (tungi 02:00 da) yangi qo'shilgan zaryadlash ma'lumotlarini avtomatik ko'chirib boruvchi xizmat ishga tushirildi.
-4. **Veb Boshqaruv Paneli Ishga Tushirildi:**
-   * Istalgan vaqtda brauzer orqali tizim holatini kuzatish, sanalar bo'yicha ma'lumotlarni sinovdan o'tkazish (Dry-Run) va hisobotlarni ko'rish imkoniyati yaratildi.
-
----
-
-### 3. 📊 Erishilgan Aniq Natijalar
-* **Jami Qamrab Olingan Ma'lumotlar:** PostgreSQL bazasidagi 859,892 ta zaryadlash yozuvlarining **100% i (barchasi)** yangi bazaga to'g'ri moslashtirildi (0 ta qolib ketgan ma'lumot).
-* **Ko'p Yillik Sinov:** 2020-yildan 2026-yilgacha bo'lgan barcha yillar bo'yicha testlar muvaffaqiyatli o'tkazildi.
-* **Takrorlanishdan Himoya:** Bir xil ma'lumot qayta yuklanganda dublikat bo'lib ko'payib ketmasligi to'liq ta'minlandi.
+### 3. 📊 Erishilgan Aniq Natijalar va Qulayliklar
+* **Aniqlik va Xavfsizlik:** [Masalan: 100% xatosiz ishlash, barcha ma'lumotlar to'liq saqlandi]
+* **Avtomatlashtirish & Vaqt Tejalishi:** [Masalan: Qo'l mehnati bekor qilindi, avtomatik rejimda ishlaydi]
+* **Boshqaruv & Monitoring:** [Masalan: Real vaqtda natijalarni ko'rish imkoniyati mavjud]
 
 ---
 
 ### 4. 🔜 Kelgusi Hafta Rejalari
-* Tizimning kundalik avtomatik ishlashini monitoring qilish va zaryadlash analitikasi bo'yicha qo'shimcha statistik filtrlarni kengaytirish.
+* [Keyingi haftada nimalar qilinishi rejalashtirilgan – 1-2 ta asosiy punkt]
 ```
+
+---
+
+## 3. 🎯 AI Uchun Yozish Qoidalari (Golden Rules):
+
+1. **Jargonlardan qoching:** SQL so'rovlari, Python funksiyalari, `NoneType`, `regex` yoki server portlarini aslo yozmang.
+2. **Foydani birinchi o'ringa qo'ying:** Dasturchi bo'lmagan rahbar "Bu narsa kompaniyaga nima berdi?" degan savolga bir zumda javob topsin.
+3. **Stil:** Rasmiy, londa, g'alaba va natijaga yo'naltirilgan (Result-oriented).
