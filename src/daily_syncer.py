@@ -291,6 +291,12 @@ class DailySyncer:
                 pay_expr = f"h.{actual_pay_col}" if actual_pay_col in available_cols else "''"
                 st_select = f"CAST(h.{actual_st_col} AS VARCHAR)" if actual_st_col in available_cols else "''"
                 cp_select = f"CAST(h.{actual_cp_col} AS VARCHAR)" if actual_cp_col in available_cols else "''"
+                has_charger_id = "charger_id" in available_cols
+
+                if has_charger_id:
+                    charger_join = f"LEFT JOIN charger c ON ({st_select} = c.station_id AND h.charger_id = c.charger_id AND {cp_select} = c.charger_no)"
+                else:
+                    charger_join = f"LEFT JOIN charger c ON ({st_select} = c.station_id AND {cp_select} = c.charger_no)"
 
                 if has_start_date:
                     date_expr = "h.start_date"
@@ -314,7 +320,7 @@ class DailySyncer:
                            {rec_date_select} AS record_start_date
                     FROM {pg_table} h
                     LEFT JOIN station s ON {st_select} = s.station_id
-                    LEFT JOIN charger c ON ({st_select} = c.station_id AND {cp_select} = c.charger_no)
+                    {charger_join}
                 """
 
                 if is_range_query:

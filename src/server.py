@@ -435,13 +435,17 @@ def get_schema_preview_sample():
             safe_cp_col = resolve_col(cp_col, ["charger_no", "charger_name", "charger"], "charger_no")
 
             st_sel = f"h.{safe_st_col}" if safe_st_col in available_cols else "NULL"
-            cp_sel = f"h.{safe_cp_col}" if safe_cp_col in available_cols else "NULL"
+            has_charger_id = "charger_id" in available_cols
+            if has_charger_id:
+                c_join = f"LEFT JOIN charger c ON ({st_sel} = c.station_id AND h.charger_id = c.charger_id AND {cp_sel} = c.charger_no)"
+            else:
+                c_join = f"LEFT JOIN charger c ON ({st_sel} = c.station_id AND {cp_sel} = c.charger_no)"
 
             join_sql = f"""
                 SELECT h.*, s.station_name, c.charger_name 
                 FROM {pg_table} h 
                 LEFT JOIN station s ON {st_sel} = s.station_id 
-                LEFT JOIN charger c ON ({st_sel} = c.station_id AND {cp_sel} = c.charger_no) 
+                {c_join} 
                 WHERE s.station_name IS NOT NULL 
                 ORDER BY 1 DESC LIMIT 1
             """
