@@ -145,7 +145,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } catch (e) {}
     } catch (err) {
-      appendLog("Sozlamalarni yuklashda xatolik: " + err.message, "error");
+      const isKo = window.i18n && window.i18n.getLanguage() === "ko";
+      appendLog((isKo ? "설정 로드 오류: " : "Sozlamalarni yuklashda xatolik: ") + err.message, "error");
     }
   }
 
@@ -848,27 +849,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const startDate = pgSyncStartDateInput ? pgSyncStartDateInput.value : "";
     const endDate = pgSyncEndDateInput ? pgSyncEndDateInput.value : "";
     const currToday = getTodayDateStr();
+    const isKo = window.i18n && window.i18n.getLanguage() === "ko";
 
     // Validation for Future Date
     if (startDate && startDate > currToday) {
-      appendLog(`🔴 Xatolik: Kelajak sanasi (${startDate}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun (${currToday}).`, "error");
-      alert(`Kelajak sanasi (${startDate}) bo'yicha ma'lumot ko'chirib bo'lmaydi! Maksimal sana: bugun (${currToday}).`);
+      appendLog(isKo ? `🔴 오류: 미래 날짜(${startDate})의 데이터는 이관할 수 없습니다! 최대 날짜: 오늘(${currToday}).` : `🔴 Xatolik: Kelajak sanasi (${startDate}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun (${currToday}).`, "error");
+      alert(isKo ? `미래 날짜(${startDate})의 데이터는 이관할 수 없습니다! 최대 날짜: 오늘(${currToday}).` : `Kelajak sanasi (${startDate}) bo'yicha ma'lumot ko'chirib bo'lmaydi! Maksimal sana: bugun (${currToday}).`);
       return;
     }
     if (endDate && endDate > currToday) {
-      appendLog(`🔴 Xatolik: Kelajak sanasi (${endDate}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun (${currToday}).`, "error");
-      alert(`Kelajak sanasi (${endDate}) bo'yicha ma'lumot ko'chirib bo'lmaydi! Maksimal sana: bugun (${currToday}).`);
+      appendLog(isKo ? `🔴 오류: 미래 날짜(${endDate})의 데이터는 이관할 수 없습니다! 최대 날짜: 오늘(${currToday}).` : `🔴 Xatolik: Kelajak sanasi (${endDate}) bo'yicha ma'lumot ko'chirish mumkin emas! Maksimal sana: bugun (${currToday}).`, "error");
+      alert(isKo ? `미래 날짜(${endDate})의 데이터는 이관할 수 없습니다! 최대 날짜: 오늘(${currToday}).` : `Kelajak sanasi (${endDate}) bo'yicha ma'lumot ko'chirib bo'lmaydi! Maksimal sana: bugun (${currToday}).`);
       return;
     }
 
     // Validation for Range Order
     if (startDate && endDate && startDate > endDate) {
-      appendLog(`🔴 Xatolik: Boshlanish sanasi (${startDate}) tugash sanasidan (${endDate}) katta bo'lishi mumkin emas!`, "error");
-      alert(`Boshlanish sanasi (${startDate}) tugash sanasidan (${endDate}) katta bo'lishi mumkin emas!`);
+      appendLog(isKo ? `🔴 오류: 시작 날짜(${startDate})가 종료 날짜(${endDate})보다 클 수 없습니다!` : `🔴 Xatolik: Boshlanish sanasi (${startDate}) tugash sanasidan (${endDate}) katta bo'lishi mumkin emas!`, "error");
+      alert(isKo ? `시작 날짜(${startDate})가 종료 날짜(${endDate})보다 클 수 없습니다!` : `Boshlanish sanasi (${startDate}) tugash sanasidan (${endDate}) katta bo'lishi mumkin emas!`);
       return;
     }
 
-    const isKo = window.i18n && window.i18n.getLanguage() === "ko";
     const rangeLabel = (startDate && endDate) ? `${startDate} ~ ${endDate}` : (startDate || endDate || (isKo ? '어제' : 'Kechagi kun'));
     const modeText = dryRun ? (isKo ? "Dry-Run 테스트" : "Dry-Run Sinov") : (isKo ? "실제 DB 동기화" : "Real Bazaga Sync");
     appendLog(isKo ? `PostgreSQL 데일리 동기화 시작 (${modeText}) | 날짜: ${rangeLabel}...` : `PostgreSQL Daily Sync boshlandi (${modeText}) | Sana: ${rangeLabel}...`, "info");
