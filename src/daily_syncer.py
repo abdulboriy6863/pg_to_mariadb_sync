@@ -188,8 +188,9 @@ class DailySyncer:
                            CASE WHEN h.end_date IS NOT NULL AND h.end_time IS NOT NULL 
                                 THEN CONCAT(h.end_date, ' ', h.end_time)
                                 ELSE CAST(h.{end_col} AS VARCHAR) END AS end_time,
-                           CASE WHEN h.use_power IS NOT NULL THEN (CASE WHEN h.use_power > 5000 THEN ROUND(CAST(h.use_power AS NUMERIC) / 1000.0, 2) ELSE CAST(h.use_power AS NUMERIC) END)
-                                ELSE CAST(h.{power_col} AS NUMERIC) END AS power_kwh,
+                           CASE WHEN h.use_power IS NOT NULL 
+                                THEN ROUND(CAST(h.use_power AS NUMERIC) / 1000.0, 2)
+                                ELSE ROUND(CAST(h.{power_col} AS NUMERIC) / 1000.0, 2) END AS power_kwh,
                            COALESCE(h.use_payment, h.{price_col}) AS price_won,
                            h.{card_col} AS card_no,
                            h.{pay_col} AS pay_type
@@ -318,7 +319,7 @@ class DailySyncer:
                 "connectorId": 1,
                 begin_col: begin_str,
                 end_col: end_str,
-                power_col: float(r.get("power_kwh", 0)),
+                power_col: round(float(r.get("power_kwh", 0) or 0), 2),
                 "powerUnit": "kWh",
                 price_col: int(float(r.get("price_won", 0))),
                 card_col: str(r.get("card_no", "")),

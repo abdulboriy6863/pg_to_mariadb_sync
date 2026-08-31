@@ -437,9 +437,7 @@ def get_schema_preview_sample():
 
     actual_power_col, raw_power = find_val([power_col, "power_kwh", "use_power", "power", "kwh"])
     try:
-        power_num = float(raw_power or 0)
-        if power_num > 5000:
-            power_num = round(power_num / 1000.0, 2)
+        power_num = round(float(raw_power or 0) / 1000.0, 2)
     except (ValueError, TypeError):
         power_num = 0.0
 
