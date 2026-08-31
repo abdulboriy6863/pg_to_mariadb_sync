@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--csv-import', action='store_true', help='Execute live CSV import into MariaDB')
     parser.add_argument('--daily-sync-dry-run', action='store_true', help='Test daily incremental sync logic')
     parser.add_argument('--test-db', action='store_true', help='Test connection to MariaDB server')
+    parser.add_argument('--reload', action='store_true', help='Enable auto-reload for local development')
     parser.add_argument('--csv-path', type=str, default='charging_data.csv', help='Path to CSV file')
 
     args = parser.parse_args()
@@ -49,11 +50,14 @@ def main():
         print('Import Result:', result)
 
     else:
+        print(f'=== Launching Responsive Web Dashboard on http://0.0.0.0:{args.port} ===')
+        print(f'Local URL: http://localhost:{args.port}')
+        print(f'Network URL: http://192.168.0.25:{args.port}')
         uvicorn.run(
             "src.server:app",
             host="0.0.0.0",
             port=args.port,
-            reload=False
+            reload=args.reload
         )
 
 if __name__ == '__main__':
