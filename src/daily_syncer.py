@@ -197,14 +197,24 @@ class DailySyncer:
         if pg_table in ["charging_history", "charge_history", ""]:
             pg_table = "using_history"
 
-        st_col = "".join(c for c in str(pg_schema.get("station_name_col", "station_name")) if c.isalnum() or c == '_') or "station_name"
-        cp_col = "".join(c for c in str(pg_schema.get("charger_name_col", "charger_name")) if c.isalnum() or c == '_') or "charger_name"
-        begin_col = "".join(c for c in str(pg_schema.get("begin_time_col", "begin_time")) if c.isalnum() or c == '_') or "begin_time"
+        st_col = "".join(c for c in str(pg_schema.get("station_name_col", "station_id")) if c.isalnum() or c == '_') or "station_id"
+        cp_col = "".join(c for c in str(pg_schema.get("charger_name_col", "charger_no")) if c.isalnum() or c == '_') or "charger_no"
+        begin_col = "".join(c for c in str(pg_schema.get("begin_time_col", "start_time")) if c.isalnum() or c == '_') or "start_time"
         end_col = "".join(c for c in str(pg_schema.get("end_time_col", "end_time")) if c.isalnum() or c == '_') or "end_time"
-        power_col = "".join(c for c in str(pg_schema.get("power_kwh_col", "power_kwh")) if c.isalnum() or c == '_') or "power_kwh"
-        price_col = "".join(c for c in str(pg_schema.get("price_won_col", "price_won")) if c.isalnum() or c == '_') or "price_won"
+        power_col = "".join(c for c in str(pg_schema.get("power_kwh_col", "use_power")) if c.isalnum() or c == '_') or "use_power"
+        price_col = "".join(c for c in str(pg_schema.get("price_won_col", "use_payment")) if c.isalnum() or c == '_') or "use_payment"
         card_col = "".join(c for c in str(pg_schema.get("card_no_col", "card_no")) if c.isalnum() or c == '_') or "card_no"
         pay_col = "".join(c for c in str(pg_schema.get("pay_type_col", "pay_type")) if c.isalnum() or c == '_') or "pay_type"
+
+        if pg_table == "using_history":
+            if st_col in ["station_name", "station", ""]:
+                st_col = "station_id"
+            if cp_col in ["charger_name", "charger", ""]:
+                cp_col = "charger_no"
+            if power_col in ["power_kwh", "power", ""]:
+                power_col = "use_power"
+            if price_col in ["price_won", "price", ""]:
+                price_col = "use_payment"
 
         pg_records = []
         conn = self.pg_client.get_connection()

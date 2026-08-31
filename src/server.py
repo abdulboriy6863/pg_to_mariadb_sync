@@ -77,18 +77,41 @@ def apply_auto_sync_schedule(auto_sync_cfg=None):
             logging.info("🛑 Removed daily_sync_job (Disabled).")
 
 def repair_legacy_config():
-    for p in [CONFIG_PATH, MAPPING_RULES_PATH]:
-        if os.path.exists(p):
-            try:
-                with open(p, "r", encoding="utf-8") as f:
-                    txt = f.read()
-                if "charging_history" in txt:
-                    txt = txt.replace('"charging_history"', '"using_history"')
-                    with open(p, "w", encoding="utf-8") as f:
-                        f.write(txt)
-                    logging.info(f"✅ Automatically updated table name to using_history in {p}")
-            except Exception as e:
-                logging.warning(f"Error checking {p}: {e}")
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                txt = f.read()
+            if "charging_history" in txt:
+                txt = txt.replace('"charging_history"', '"using_history"')
+                with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                    f.write(txt)
+                logging.info(f"✅ Automatically updated table name to using_history in {CONFIG_PATH}")
+        except Exception as e:
+            logging.warning(f"Error checking {CONFIG_PATH}: {e}")
+
+    if os.path.exists(MAPPING_RULES_PATH):
+        try:
+            with open(MAPPING_RULES_PATH, "r", encoding="utf-8") as f:
+                rules = json.load(f)
+            pg_map = rules.setdefault("pg_schema_mapping", {})
+            pg_map["table_name"] = "using_history"
+            if pg_map.get("station_name_col") in ["station_name", "", None]:
+                pg_map["station_name_col"] = "station_id"
+            if pg_map.get("charger_name_col") in ["charger_name", "", None]:
+                pg_map["charger_name_col"] = "charger_no"
+            if pg_map.get("power_kwh_col") in ["power_kwh", "", None]:
+                pg_map["power_kwh_col"] = "use_power"
+            if pg_map.get("price_won_col") in ["price_won", "", None]:
+                pg_map["price_won_col"] = "use_payment"
+            if pg_map.get("begin_time_col") in ["begin_time", "", None]:
+                pg_map["begin_time_col"] = "start_time"
+            if pg_map.get("end_time_col") in ["end_time", "", None]:
+                pg_map["end_time_col"] = "end_time"
+            with open(MAPPING_RULES_PATH, "w", encoding="utf-8") as f:
+                json.dump(rules, f, indent=2, ensure_ascii=False)
+            logging.info("✅ Automatically verified and repaired mapping_rules.json with correct PG columns.")
+        except Exception as e:
+            logging.warning(f"Error checking {MAPPING_RULES_PATH}: {e}")
 
 @app.on_event("startup")
 def start_scheduler():
