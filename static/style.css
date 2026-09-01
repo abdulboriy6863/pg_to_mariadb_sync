@@ -890,13 +890,13 @@ body {
   font-family: 'Outfit', sans-serif;
 }
 
-/* Dedup Table Card */
+/* Dedup Table Card (CodePen Dark Table Theme) */
 .dedup-table-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: #1b222a;
+  border: 1px solid #28323c;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .dedup-table-toolbar {
@@ -912,8 +912,9 @@ body {
   overflow-x: auto;
   overflow-y: auto;
   max-height: 480px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  border: 1px solid #28323c;
+  background: #1e242b;
 }
 
 .dedup-table {
@@ -927,83 +928,114 @@ body {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #0f172a;
-  color: var(--text-muted);
-  font-weight: 600;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border-color);
+  background: #263038;
+  color: #ffffff;
+  font-weight: 700;
+  padding: 13px 15px;
+  border-bottom: 1px solid #343e49;
+  letter-spacing: 0.2px;
   white-space: nowrap;
 }
 
-.dedup-table tr.group-even td {
-  background: rgba(15, 23, 42, 0.45);
+.dedup-table tbody tr {
+  background: #1e242b;
+  transition: background 0.15s ease;
 }
 
-.dedup-table tr.group-odd td {
-  background: rgba(30, 41, 59, 0.25);
+.dedup-table tbody tr:hover {
+  background: #263038 !important;
 }
 
-.dedup-table tr.group-even:hover td,
-.dedup-table tr.group-odd:hover td {
-  background: rgba(99, 102, 241, 0.08);
+.dedup-table tbody tr.group-even {
+  background: #1e242b;
+}
+
+.dedup-table tbody tr.group-odd {
+  background: #1a2027;
+}
+
+.dedup-table td {
+  padding: 11px 15px;
+  border-bottom: 1px solid #28323c;
+  vertical-align: middle;
 }
 
 .dedup-table tr.group-last td {
-  border-bottom: 2px solid rgba(99, 102, 241, 0.5) !important;
+  border-bottom: 2px solid #3b82f6 !important;
 }
 
 .dedup-table tr.group-inner td {
   border-bottom: 1px dashed rgba(255, 255, 255, 0.04);
 }
 
-/* Time Capsule Typography */
+/* Time Monospace Pill */
 .time-capsule {
   display: inline-block;
   font-family: 'JetBrains Mono', 'SF Mono', Consolas, Menlo, monospace;
   font-size: 12.5px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  letter-spacing: 0.3px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
   white-space: nowrap;
+  background: #151a21;
+  border: 1px solid #28323c;
+  color: #e2e8f0;
 }
 
 .time-capsule.time-begin {
   color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 .time-capsule.time-end {
   color: #c084fc;
-  border: 1px solid rgba(192, 132, 252, 0.25);
-  background: rgba(192, 132, 252, 0.08);
+  border-color: rgba(192, 132, 252, 0.25);
+  background: rgba(192, 132, 252, 0.06);
 }
 
-/* Badges */
-.dedup-badge {
+/* Status Dot Indicators (CodePen Dark Table Style) */
+.dt-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.badge-exact { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-zero { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-.badge-overlap { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-.badge-keep { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-.badge-delete { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+.dt-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
 
-/* Pagination */
+.dt-status-keep {
+  color: #a3e635;
+}
+
+.dt-status-keep .dt-dot {
+  background: #a3e635;
+  box-shadow: 0 0 6px rgba(163, 230, 53, 0.6);
+}
+
+.dt-status-delete {
+  color: #f87171;
+}
+
+.dt-status-delete .dt-dot {
+  background: #f87171;
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+}
+
+/* Pagination (CodePen Style) */
 .dedup-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 18px;
+  margin-top: 16px;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -1015,31 +1047,37 @@ body {
 }
 
 .page-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: rgba(30, 41, 59, 0.5);
-  color: var(--text-main);
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid #2e3843;
+  background: #232b34;
+  color: #cbd5e1;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.3);
-  border-color: #6366f1;
+  background: #2c3642;
+  border-color: #3b82f6;
+  color: #fff;
 }
 
 .page-btn.active {
-  background: #6366f1;
+  background: #2563eb;
   color: #fff;
-  border-color: #6366f1;
+  border-color: #2563eb;
   font-weight: 700;
 }
 
 .page-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 

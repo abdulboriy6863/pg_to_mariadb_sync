@@ -1632,11 +1632,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const isChecked = dedupState.selectedTxIds.has(r.transactionId);
         const groupParity = (r._groupIndex % 2 === 0) ? "group-even" : "group-odd";
         const groupBorderClass = r._isLastInGroup ? "group-last" : "group-inner";
-        const rowClass = `${groupParity} ${groupBorderClass}`;
+        const statusText = r.is_recommended_keep
+          ? (window.i18n ? window.i18n.t("badge_keep") : (isKo ? "원본 (유지)" : "Asl nusxa (Qoladi)"))
+          : (window.i18n ? window.i18n.t("badge_delete") : (isKo ? "중복 (삭제 권장)" : "Dublikat (O'chiriladi)"));
 
-        const actionBadgeHtml = r.is_recommended_keep 
-          ? `<span class="dedup-badge badge-keep">${window.i18n ? window.i18n.t("badge_keep") : (isKo ? "✅ 원본 (유지)" : "✅ Asl nusxa (Qoladi)")}</span>`
-          : `<span class="dedup-badge badge-delete">${window.i18n ? window.i18n.t("badge_delete") : (isKo ? "🗑️ 중복 (삭제 권장)" : "🗑️ Dublikat (O'chiriladi)")}</span>`;
+        const statusHtml = r.is_recommended_keep 
+          ? `<div class="dt-status dt-status-keep"><span class="dt-dot"></span>${statusText}</div>`
+          : `<div class="dt-status dt-status-delete"><span class="dt-dot"></span>${statusText}</div>`;
 
         html += `
           <tr class="${rowClass}">
@@ -1644,13 +1646,13 @@ document.addEventListener("DOMContentLoaded", () => {
               <input type="checkbox" class="chk-dedup-item" data-tx="${r.transactionId}" ${isChecked ? "checked" : ""} onchange="toggleDedupRow('${r.transactionId}', this.checked)">
             </td>
             <td>
-              <div style="font-weight: 600; color: #f8fafc; font-size: 13.5px;">${r.charger_name || ('CP #' + r.cpId)}</div>
+              <div style="font-weight: 600; color: #ffffff; font-size: 13.5px;">${r.charger_name || ('CP #' + r.cpId)}</div>
               <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${r.station_name || ('CS #' + r.csId)} | ID: ${r.cpId}</div>
             </td>
-            <td style="text-align: center;"><span style="display: inline-block; font-weight: 700; color: #818cf8; background: rgba(99, 102, 241, 0.12); padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(99, 102, 241, 0.25);">#${r.connectorId || 1}</span></td>
+            <td style="text-align: center;"><span style="display: inline-block; font-weight: 700; color: #60a5fa; background: rgba(59, 130, 246, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.25);">#${r.connectorId || 1}</span></td>
             <td><span class="time-capsule time-begin">${r.begin}</span></td>
             <td><span class="time-capsule time-end">${r.end}</span></td>
-            <td style="text-align: center;">${actionBadgeHtml}</td>
+            <td style="text-align: left;">${statusHtml}</td>
           </tr>
         `;
       });
