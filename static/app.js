@@ -1397,7 +1397,7 @@ document.addEventListener("DOMContentLoaded", () => {
     filteredRecords: [],
     selectedTxIds: new Set(),
     currentPage: 1,
-    pageSize: 15,
+    pageSize: 10,
     currentTypeFilter: "all"
   };
 

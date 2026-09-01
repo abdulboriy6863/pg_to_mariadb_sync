@@ -910,6 +910,8 @@ body {
 
 .table-responsive-wrapper {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 480px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -922,7 +924,10 @@ body {
 }
 
 .dedup-table th {
-  background: rgba(15, 23, 42, 0.8);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #0f172a;
   color: var(--text-muted);
   font-weight: 600;
   padding: 12px 14px;
