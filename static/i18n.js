@@ -401,6 +401,12 @@ function setLanguage(lang) {
   if (window.validateSchema) {
     window.validateSchema();
   }
+  if (window.renderDedupTable) {
+    window.renderDedupTable();
+  }
+  if (window.updateDedupKpiCounts) {
+    window.updateDedupKpiCounts();
+  }
 }
 
 function t(key, params = {}) {

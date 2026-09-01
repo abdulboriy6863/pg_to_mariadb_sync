@@ -1497,13 +1497,13 @@ document.addEventListener("DOMContentLoaded", () => {
       
       const statTotal = document.getElementById("statTotalDupeVal");
       const statExact = document.getElementById("statExactDupeVal");
-      const statZero = document.getElementById("statZeroDupeVal");
-      const statOverlap = document.getElementById("statOverlapDupeVal");
-
-      if (statTotal) statTotal.textContent = (data.total_duplicates || 0).toLocaleString() + unit;
-      if (statExact) statExact.textContent = (data.exact_count || 0).toLocaleString() + unit;
-      if (statZero) statZero.textContent = (data.zero_power_count || 0).toLocaleString() + unit;
-      if (statOverlap) statOverlap.textContent = (data.overlap_count || 0).toLocaleString() + unit;
+      dedupState._lastCounts = {
+        total: data.total_duplicates || 0,
+        exact: data.exact_count || 0,
+        zero: data.zero_power_count || 0,
+        overlap: data.overlap_count || 0
+      };
+      updateDedupKpiCounts();
 
       // Flatten records with group reference
       dedupState.groups = data.groups || [];
@@ -1532,6 +1532,22 @@ document.addEventListener("DOMContentLoaded", () => {
         btnScan.disabled = false;
         btnScan.innerHTML = window.i18n ? window.i18n.t("btn_scan_dedup") : "🔍 Skanerlash";
       }
+    }
+  }
+
+  function updateDedupKpiCounts() {
+    const isKo = window.i18n && window.i18n.getLanguage() === 'ko';
+    const unit = isKo ? "건" : " ta";
+    const statTotal = document.getElementById("statTotalDupeVal");
+    const statExact = document.getElementById("statExactDupeVal");
+    const statZero = document.getElementById("statZeroDupeVal");
+    const statOverlap = document.getElementById("statOverlapDupeVal");
+
+    if (dedupState._lastCounts) {
+      if (statTotal) statTotal.textContent = (dedupState._lastCounts.total || 0).toLocaleString() + unit;
+      if (statExact) statExact.textContent = (dedupState._lastCounts.exact || 0).toLocaleString() + unit;
+      if (statZero) statZero.textContent = (dedupState._lastCounts.zero || 0).toLocaleString() + unit;
+      if (statOverlap) statOverlap.textContent = (dedupState._lastCounts.overlap || 0).toLocaleString() + unit;
     }
   }
 
@@ -1933,6 +1949,8 @@ document.addEventListener("DOMContentLoaded", () => {
   window.toggleHeaderCheckbox = toggleHeaderCheckbox;
   window.selectAllDedup = selectAllDedup;
   window.deselectAllDedup = deselectAllDedup;
+  window.renderDedupTable = renderDedupTable;
+  window.updateDedupKpiCounts = updateDedupKpiCounts;
   window.executeCleanSelected = executeCleanSelected;
   window.openBackupModal = openBackupModal;
   window.closeBackupModal = closeBackupModal;
