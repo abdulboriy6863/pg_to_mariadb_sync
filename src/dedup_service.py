@@ -133,6 +133,9 @@ class DedupService:
             }
 
         # Build date condition (optimized for index usage)
+        if start_date and end_date and str(start_date) > str(end_date):
+            start_date, end_date = end_date, start_date
+
         params = []
         if start_date and end_date:
             s_val = start_date if " " in start_date else f"{start_date} 00:00:00"

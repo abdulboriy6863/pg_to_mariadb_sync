@@ -1414,15 +1414,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (btnSync) btnSync.classList.remove("active");
       if (btnDedup) btnDedup.classList.add("active");
 
-      // Auto set default dates if empty (e.g. current year or recent month)
+      // Auto set default dates if empty (recent 7 days)
       const startDateInput = document.getElementById("dedupStartDate");
       const endDateInput = document.getElementById("dedupEndDate");
       if (startDateInput && !startDateInput.value) {
         const d = new Date();
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        startDateInput.value = `${y}-${m}-01`;
-        endDateInput.value = d.toISOString().split('T')[0];
+        const todayStr = d.toISOString().split('T')[0];
+        const past = new Date();
+        past.setDate(past.getDate() - 7);
+        startDateInput.value = past.toISOString().split('T')[0];
+        endDateInput.value = todayStr;
       }
     } else {
       if (viewSync) viewSync.style.display = "block";
@@ -1434,8 +1435,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function scanDuplicates() {
     const btnScan = document.getElementById("btnScanDedup");
-    const startDate = document.getElementById("dedupStartDate")?.value || "";
-    const endDate = document.getElementById("dedupEndDate")?.value || "";
+    let startDate = document.getElementById("dedupStartDate")?.value || "";
+    let endDate = document.getElementById("dedupEndDate")?.value || "";
+
+    if (startDate && endDate && startDate > endDate) {
+      // Auto swap in inputs
+      const tmp = startDate;
+      startDate = endDate;
+      endDate = tmp;
+      if (document.getElementById("dedupStartDate")) document.getElementById("dedupStartDate").value = startDate;
+      if (document.getElementById("dedupEndDate")) document.getElementById("dedupEndDate").value = endDate;
+    }
 
     if (btnScan) {
       btnScan.disabled = true;
@@ -1446,7 +1456,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tableBody) {
       tableBody.innerHTML = `
         <tr>
-          <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+          <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
             <div class="spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
             <div style="font-size: 14px; font-weight: 500;">MariaDB bazasi skanerlanmoqda...</div>
           </td>
@@ -1464,10 +1474,16 @@ document.addEventListener("DOMContentLoaded", () => {
           dedup_type: dedupState.currentTypeFilter
         })
       });
-      const data = await res.json();
 
-      if (data.status !== "success") {
-        alert("Skanerlash xatoligi: " + (data.message || "Noma'lum xatolik"));
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        data = { status: "error", message: `Server HTTP ${res.status}` };
+      }
+
+      if (!res.ok || data.status !== "success") {
+        alert("Skanerlash xatoligi: " + (data.message || data.detail || `Server xatoligi (${res.status})`));
         if (btnScan) {
           btnScan.disabled = false;
           btnScan.innerHTML = window.i18n ? window.i18n.t("btn_scan_dedup") : "🔍 Skanerlash";
