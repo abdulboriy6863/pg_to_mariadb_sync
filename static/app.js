@@ -1449,16 +1449,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (btnScan) {
       btnScan.disabled = true;
-      btnScan.innerHTML = "⏳ Skanerlanmoqda...";
+      btnScan.innerHTML = window.i18n ? window.i18n.t("dedup_scanning_btn") : "⏳ Skanerlanmoqda...";
     }
 
     const tableBody = document.getElementById("dedupTableBody");
     if (tableBody) {
+      const spinnerText = window.i18n ? window.i18n.t("dedup_scanning_spinner") : "MariaDB bazasi skanerlanmoqda...";
       tableBody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
             <div class="spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-            <div style="font-size: 14px; font-weight: 500;">MariaDB bazasi skanerlanmoqda...</div>
+            <div style="font-size: 14px; font-weight: 500;">${spinnerText}</div>
           </td>
         </tr>
       `;
@@ -1734,7 +1735,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnClean = document.getElementById("btnCleanSelected");
     if (btnClean) {
       btnClean.disabled = true;
-      btnClean.innerHTML = "⏳ Tozalanmoqda...";
+      btnClean.innerHTML = window.i18n ? window.i18n.t("dedup_cleaning_btn") : "⏳ Tozalanmoqda...";
     }
 
     try {
@@ -1887,7 +1888,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("btnRestoreBulk");
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = "⏳ Qaytarilmoqda...";
+      btn.innerHTML = window.i18n ? window.i18n.t("dedup_restoring_btn") : "⏳ Qaytarilmoqda...";
     }
 
     try {
