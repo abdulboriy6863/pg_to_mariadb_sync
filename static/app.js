@@ -1843,7 +1843,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <td style="font-size: 11px; color: var(--text-muted);">${b.deleted_at || '-'}</td>
               <td style="text-align: right;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="restoreSingleBackup('${b.transactionId}')" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); cursor: pointer;">
-                  ↩️ Qaytarish
+                  ${typeof t === 'function' ? t('btn_restore_single') : '↩️ Qaytarish'}
                 </button>
               </td>
             </tr>
@@ -1851,10 +1851,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         tableBody.innerHTML = html;
       } else {
+        const emptyMsg = typeof t === 'function' ? t('backup_empty_records') : "Zaxira jadvalida o'chirilgan dublikatlar topilmadi.";
         tableBody.innerHTML = `
           <tr>
             <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
-              Zaxira jadvalida o'chirilgan dublikatlar topilmadi.
+              ${emptyMsg}
             </td>
           </tr>
         `;
