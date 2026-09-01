@@ -1,7 +1,11 @@
 import json
 import logging
 import os
-import psycopg2
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("PostgreSQLClient")
@@ -24,6 +28,10 @@ class PostgreSQLClient:
             return {}
 
     def get_connection(self, override_config=None):
+        if psycopg2 is None:
+            logger.warning("psycopg2 is not installed in Python environment.")
+            return None
+
         cfg = override_config if override_config else self._load_config()
         try:
             conn = psycopg2.connect(
