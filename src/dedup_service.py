@@ -76,8 +76,16 @@ class DedupService:
                     ADD COLUMN IF NOT EXISTS `deleted_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                     ADD COLUMN IF NOT EXISTS `delete_reason` VARCHAR(64) DEFAULT 'MANUAL_DEDUP';
                     """)
+                    
+                    # Add indexing for fast queries
+                    try:
+                        cursor.execute(f"CREATE INDEX IF NOT EXISTS `idx_b_del_at` ON {backup_table} (`deleted_at`);")
+                        cursor.execute(f"CREATE INDEX IF NOT EXISTS `idx_b_cp_begin` ON {backup_table} (`cpId`, `begin`);")
+                    except Exception:
+                        pass
+
                     conn.commit()
-                    logger.info(f"✅ Table {backup_table} created successfully with audit columns.")
+                    logger.info(f"✅ Table {backup_table} created successfully with audit columns and indexes.")
                 return True, f"Backup table `{self.backup_table_name}` is ready."
         except Exception as e:
             logger.error(f"Error creating backup table {backup_table}: {e}")
@@ -342,10 +350,10 @@ class DedupService:
         finally:
             conn.close()
 
-    def delete_and_backup_duplicates(self, transaction_ids, delete_reason="MANUAL_SELECTION"):
+    def delete_and_backup_duplicates(self, transaction_ids, delete_reason="MANUAL_SELECTION", chunk_size=500):
         """
         Safely copies specified duplicate records to TCSP_CHARGE_HIST_DUPLICATES_BACKUP,
-        then deletes them from TCSP_CHARGE_HIST.
+        then deletes them from TCSP_CHARGE_HIST using chunking and atomic transaction.
         """
         if not transaction_ids:
             return {"status": "success", "backed_up_count": 0, "deleted_count": 0}
@@ -360,34 +368,40 @@ class DedupService:
         if not conn:
             return {"status": "error", "message": "MariaDB connection offline"}
 
+        total_backed_up = 0
+        total_deleted = 0
+        tx_list = list(transaction_ids)
+
         try:
             with conn.cursor() as cursor:
-                placeholders = ", ".join(["%s"] * len(transaction_ids))
+                for i in range(0, len(tx_list), chunk_size):
+                    chunk = tx_list[i:i + chunk_size]
+                    placeholders = ", ".join(["%s"] * len(chunk))
 
-                # 1. Copy records to backup table with audit columns
-                copy_sql = f"""
-                INSERT INTO {backup_table}
-                SELECT *, NOW() as deleted_at, %s as delete_reason
-                FROM {target_table}
-                WHERE {tx_col} IN ({placeholders});
-                """
-                cursor.execute(copy_sql, [delete_reason] + list(transaction_ids))
-                backed_up = cursor.rowcount
+                    # 1. Copy records to backup table with audit columns
+                    copy_sql = f"""
+                    INSERT INTO {backup_table}
+                    SELECT *, NOW() as deleted_at, %s as delete_reason
+                    FROM {target_table}
+                    WHERE {tx_col} IN ({placeholders});
+                    """
+                    cursor.execute(copy_sql, [delete_reason] + chunk)
+                    total_backed_up += cursor.rowcount
 
-                # 2. Delete records from target table
-                delete_sql = f"""
-                DELETE FROM {target_table}
-                WHERE {tx_col} IN ({placeholders});
-                """
-                cursor.execute(delete_sql, list(transaction_ids))
-                deleted = cursor.rowcount
+                    # 2. Delete records from target table
+                    delete_sql = f"""
+                    DELETE FROM {target_table}
+                    WHERE {tx_col} IN ({placeholders});
+                    """
+                    cursor.execute(delete_sql, chunk)
+                    total_deleted += cursor.rowcount
 
                 conn.commit()
-                logger.info(f"✅ Successfully backed up {backed_up} and deleted {deleted} duplicates from {target_table}.")
+                logger.info(f"✅ Successfully backed up {total_backed_up} and deleted {total_deleted} duplicates from {target_table}.")
                 return {
                     "status": "success",
-                    "backed_up_count": backed_up,
-                    "deleted_count": deleted
+                    "backed_up_count": total_backed_up,
+                    "deleted_count": total_deleted
                 }
         except Exception as e:
             logger.error(f"Error during backup and delete: {e}")
@@ -470,8 +484,8 @@ class DedupService:
         finally:
             conn.close()
 
-    def restore_duplicates(self, transaction_ids):
-        """Restore specified backup records back into TCSP_CHARGE_HIST and remove from backup."""
+    def restore_duplicates(self, transaction_ids, chunk_size=500):
+        """Restore specified backup records back into TCSP_CHARGE_HIST and remove from backup using chunking and atomic transaction."""
         if not transaction_ids:
             return {"status": "success", "restored_count": 0}
 
@@ -484,30 +498,35 @@ class DedupService:
         if not conn:
             return {"status": "error", "message": "MariaDB connection offline"}
 
+        total_restored = 0
+        tx_list = list(transaction_ids)
+
         try:
             with conn.cursor() as cursor:
-                placeholders = ", ".join(["%s"] * len(transaction_ids))
-
                 # Get column list of target table to insert excluding audit columns
                 target_cols = [c['column_name'] for c in self.db_client.get_table_columns(mapping['raw_table_name'])]
                 col_names_str = ", ".join([f"`{c}`" for c in target_cols])
 
-                restore_sql = f"""
-                INSERT IGNORE INTO {target_table} ({col_names_str})
-                SELECT {col_names_str}
-                FROM {backup_table}
-                WHERE {tx_col} IN ({placeholders});
-                """
-                cursor.execute(restore_sql, list(transaction_ids))
-                restored = cursor.rowcount
+                for i in range(0, len(tx_list), chunk_size):
+                    chunk = tx_list[i:i + chunk_size]
+                    placeholders = ", ".join(["%s"] * len(chunk))
 
-                # Delete from backup table
-                del_sql = f"DELETE FROM {backup_table} WHERE {tx_col} IN ({placeholders});"
-                cursor.execute(del_sql, list(transaction_ids))
+                    restore_sql = f"""
+                    INSERT IGNORE INTO {target_table} ({col_names_str})
+                    SELECT {col_names_str}
+                    FROM {backup_table}
+                    WHERE {tx_col} IN ({placeholders});
+                    """
+                    cursor.execute(restore_sql, chunk)
+                    total_restored += cursor.rowcount
+
+                    # Delete from backup table
+                    del_sql = f"DELETE FROM {backup_table} WHERE {tx_col} IN ({placeholders});"
+                    cursor.execute(del_sql, chunk)
 
                 conn.commit()
-                logger.info(f"✅ Successfully restored {restored} records back to {target_table}.")
-                return {"status": "success", "restored_count": restored}
+                logger.info(f"✅ Successfully restored {total_restored} records back to {target_table}.")
+                return {"status": "success", "restored_count": total_restored}
         except Exception as e:
             logger.error(f"Error restoring records: {e}")
             conn.rollback()
