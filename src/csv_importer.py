@@ -144,7 +144,8 @@ class CSVImporter:
                 m = re.search(r'\d+', raw_conn)
                 if m:
                     try:
-                        conn_id = max(1, int(m.group(0)))
+                        parsed_num = int(m.group(0))
+                        conn_id = 2 if parsed_num == 2 else 1
                     except (ValueError, TypeError):
                         conn_id = 1
 

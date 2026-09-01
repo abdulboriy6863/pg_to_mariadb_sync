@@ -432,13 +432,15 @@ class DailySyncer:
             if end_str and "-" not in end_str and rec_date:
                 end_str = f"{rec_date} {end_str}".strip()
 
-            # Parse connector / port ID safely (e.g. '01' -> 1, '02' -> 2, '2 : 100kw' -> 2, fallback 1)
+            # Dual connector vs Single connector safe parsing:
+            # In MariaDB standard, connectorId is strictly 1 (Port 1 / Single) or 2 (Port 2 / Dual channel)
             raw_conn = str(r.get("raw_charger_no") or "1").strip()
             conn_id = 1
             m = re.search(r'\d+', raw_conn)
             if m:
                 try:
-                    conn_id = max(1, int(m.group(0)))
+                    parsed_num = int(m.group(0))
+                    conn_id = 2 if parsed_num == 2 else 1
                 except (ValueError, TypeError):
                     conn_id = 1
 
