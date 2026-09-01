@@ -1632,6 +1632,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const isChecked = dedupState.selectedTxIds.has(r.transactionId);
         const groupParity = (r._groupIndex % 2 === 0) ? "group-even" : "group-odd";
         const groupBorderClass = r._isLastInGroup ? "group-last" : "group-inner";
+        const rowClass = `${groupParity} ${groupBorderClass}`;
         const statusText = r.is_recommended_keep
           ? (window.i18n ? window.i18n.t("badge_keep") : (isKo ? "원본 (유지)" : "Asl nusxa (Qoladi)"))
           : (window.i18n ? window.i18n.t("badge_delete") : (isKo ? "중복 (삭제 권장)" : "Dublikat (O'chiriladi)"));
