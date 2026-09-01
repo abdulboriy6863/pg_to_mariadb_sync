@@ -15,7 +15,7 @@ class DedupService:
         self._charger_id_map = None
 
     def _get_names_cache(self):
-        """Fetch human-readable names for csId and cpId from TINF_CS and TINF_CP."""
+        """Fetch human-readable names and charger codes for csId and cpId from TINF_CS and TINF_CP."""
         if self._station_id_map is not None and self._charger_id_map is not None:
             return self._station_id_map, self._charger_id_map
 
@@ -30,10 +30,29 @@ class DedupService:
                     for r in cursor.fetchall():
                         st_map[r['id']] = r.get('name', '').strip()
 
-                    # Charger ID -> Name
-                    cursor.execute("SELECT id, name FROM TINF_CP;")
+                    # Charger ID -> Name and Code (like BNS035901)
+                    cursor.execute("SELECT * FROM TINF_CP LIMIT 1;")
+                    sample = cursor.fetchone()
+                    cols = list(sample.keys()) if sample else []
+
+                    code_col = None
+                    for c_name in ['cid', 'code', 'cpId', 'cp_id', 'chargerId', 'charger_id', 'cpCode']:
+                        if c_name in cols:
+                            code_col = c_name
+                            break
+
+                    if code_col:
+                        cursor.execute(f"SELECT id, name, `{code_col}` as code_val FROM TINF_CP;")
+                    else:
+                        cursor.execute("SELECT id, name FROM TINF_CP;")
+
                     for r in cursor.fetchall():
-                        cp_map[r['id']] = r.get('name', '').strip()
+                        name_val = (r.get('name') or '').strip()
+                        code_val = str(r.get('code_val') or '').strip()
+                        cp_map[r['id']] = {
+                            "name": name_val,
+                            "code": code_val if code_val else (f"CP #{r['id']}")
+                        }
             except Exception as e:
                 logger.warning(f"Failed to load CS/CP names cache: {e}")
             finally:
@@ -219,12 +238,19 @@ class DedupService:
                             exact_count += (len(rows) - 1)
 
                         group_items = []
+                        cp_info = cp_map.get(cp_id, {})
+                        if isinstance(cp_info, dict):
+                            cp_code = cp_info.get("code") or f"CP #{cp_id}"
+                            cp_name = cp_info.get("name") or cp_code
+                        else:
+                            cp_code = str(cp_info)
+                            cp_name = str(cp_info)
+
                         for r_idx, row in enumerate(rows):
                             tx_id = row['transactionId']
                             seen_tx_ids.add(tx_id)
                             cs_id = row['csId']
                             st_name = st_map.get(cs_id, f"Stansiya #{cs_id}")
-                            cp_name = cp_map.get(cp_id, f"Zaryadlovchi #{cp_id}")
 
                             # Recommended: First row (highest power/price or earliest) is KEEP, others are DELETE
                             is_keep = (r_idx == 0)
@@ -233,6 +259,7 @@ class DedupService:
                                 "csId": cs_id,
                                 "station_name": st_name,
                                 "cpId": cp_id,
+                                "charger_code": cp_code,
                                 "charger_name": cp_name,
                                 "connectorId": row['connectorId'],
                                 "begin": str(row['begin_time']),
@@ -250,7 +277,8 @@ class DedupService:
                             "group_id": f"GRP_EXACT_{idx+1}",
                             "type": curr_type,
                             "cpId": cp_id,
-                            "charger_name": cp_map.get(cp_id, f"Zaryadlovchi #{cp_id}"),
+                            "charger_code": cp_code,
+                            "charger_name": cp_name,
                             "connectorId": connector_id,
                             "conflict_time": begin_val,
                             "count": len(rows),
@@ -298,13 +326,20 @@ class DedupService:
 
                         cs1, cp1 = pair['cs1'], pair['cp1']
                         st_name = st_map.get(cs1, f"Stansiya #{cs1}")
-                        cp_name = cp_map.get(cp1, f"Zaryadlovchi #{cp1}")
+                        cp_info = cp_map.get(cp1, {})
+                        if isinstance(cp_info, dict):
+                            cp_code = cp_info.get("code") or f"CP #{cp1}"
+                            cp_name = cp_info.get("name") or cp_code
+                        else:
+                            cp_code = str(cp_info)
+                            cp_name = str(cp_info)
 
                         r1 = {
                             "transactionId": tx1,
                             "csId": cs1,
                             "station_name": st_name,
                             "cpId": cp1,
+                            "charger_code": cp_code,
                             "charger_name": cp_name,
                             "connectorId": pair['conn1'],
                             "begin": str(pair['b1']),
@@ -322,6 +357,7 @@ class DedupService:
                             "csId": cs1,
                             "station_name": st_name,
                             "cpId": cp1,
+                            "charger_code": cp_code,
                             "charger_name": cp_name,
                             "connectorId": pair['conn2'],
                             "begin": str(pair['b2']),
@@ -339,6 +375,7 @@ class DedupService:
                             "group_id": f"GRP_OVERLAP_{o_idx+1}",
                             "type": "TIME_OVERLAP",
                             "cpId": cp1,
+                            "charger_code": cp_code,
                             "charger_name": cp_name,
                             "connectorId": pair['conn1'],
                             "conflict_time": f"{pair['b1']} ~ {pair['e1']}",
@@ -485,12 +522,21 @@ class DedupService:
                 for r in rows:
                     cs_id = r['csId']
                     cp_id = r['cpId']
+                    cp_info = cp_map.get(cp_id, {})
+                    if isinstance(cp_info, dict):
+                        cp_code = cp_info.get("code") or f"CP #{cp_id}"
+                        cp_name = cp_info.get("name") or cp_code
+                    else:
+                        cp_code = str(cp_info)
+                        cp_name = str(cp_info)
+
                     results.append({
                         "transactionId": r['transactionId'],
                         "csId": cs_id,
                         "station_name": st_map.get(cs_id, f"Stansiya #{cs_id}"),
                         "cpId": cp_id,
-                        "charger_name": cp_map.get(cp_id, f"Zaryadlovchi #{cp_id}"),
+                        "charger_code": cp_code,
+                        "charger_name": cp_name,
                         "connectorId": r['connectorId'],
                         "begin": str(r['begin_time']),
                         "end": str(r['end_time']),

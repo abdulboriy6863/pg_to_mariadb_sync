@@ -1648,8 +1648,8 @@ document.addEventListener("DOMContentLoaded", () => {
               <input type="checkbox" class="chk-dedup-item" data-tx="${r.transactionId}" ${isChecked ? "checked" : ""} onchange="toggleDedupRow('${r.transactionId}', this.checked)">
             </td>
             <td>
-              <div style="font-weight: 600; color: #ffffff; font-size: 13.5px;">${r.charger_name || ('CP #' + r.cpId)}</div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${r.station_name || ('CS #' + r.csId)} | ID: ${r.cpId}</div>
+              <div style="font-weight: 700; color: #ffffff; font-size: 13.5px; font-family: monospace; letter-spacing: 0.5px;">${r.charger_code || r.charger_name || ('CP #' + r.cpId)}</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${r.charger_name ? r.charger_name + ' | ' : ''}${r.station_name || ('CS #' + r.csId)}</div>
             </td>
             <td style="text-align: center;"><span style="display: inline-block; font-weight: 700; color: #60a5fa; background: rgba(59, 130, 246, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.25);">#${r.connectorId || 1}</span></td>
             <td><span class="time-capsule time-begin">${r.begin}</span></td>
@@ -1826,8 +1826,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <input type="checkbox" class="chk-backup-item" data-tx="${b.transactionId}" onchange="toggleBackupRow('${b.transactionId}', this.checked)">
               </td>
               <td>
-                <div style="font-weight: 600; color: #f1f5f9;">${b.charger_name}</div>
-                <div style="font-size: 11px; color: var(--text-muted);">${b.station_name} | ID: ${b.cpId}</div>
+                <div style="font-weight: 700; color: #ffffff; font-size: 13.5px; font-family: monospace; letter-spacing: 0.5px;">${b.charger_code || b.charger_name || ('CP #' + b.cpId)}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${b.charger_name ? b.charger_name + ' | ' : ''}${b.station_name || ('CS #' + b.csId)}</div>
               </td>
               <td style="text-align: center; font-weight: 600; color: #818cf8;">#${b.connectorId || 1}</td>
               <td><div style="font-family: monospace; font-size: 12px;">${b.begin}</div></td>
