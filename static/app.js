@@ -1748,6 +1748,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Backup & Restore Modal logic
+  const selectedBackupTxIds = new Set();
+  let currentBackupList = [];
+
   function openBackupModal() {
     const modal = document.getElementById("backupModal");
     if (modal) {
@@ -1766,9 +1769,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const startDate = document.getElementById("backupStartDate")?.value || "";
     const endDate = document.getElementById("backupEndDate")?.value || "";
     const cpId = document.getElementById("backupCpId")?.value || "";
+    const chkHeader = document.getElementById("chkHeaderBackup");
+    if (chkHeader) chkHeader.checked = false;
+    selectedBackupTxIds.clear();
+    updateRestoreBulkBtn();
 
     if (tableBody) {
-      tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">⏳ Yuklanmoqda...</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">⏳ Yuklanmoqda...</td></tr>`;
     }
 
     try {
@@ -1779,12 +1786,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const res = await fetch(url);
       const data = await res.json();
+      currentBackupList = data.backups || [];
 
-      if (data.status === "success" && data.backups && data.backups.length > 0) {
+      if (data.status === "success" && currentBackupList.length > 0) {
         let html = "";
-        data.backups.forEach(b => {
+        currentBackupList.forEach(b => {
           html += `
             <tr>
+              <td style="text-align: center;">
+                <input type="checkbox" class="chk-backup-item" data-tx="${b.transactionId}" onchange="toggleBackupRow('${b.transactionId}', this.checked)">
+              </td>
               <td>
                 <div style="font-weight: 600; color: #f1f5f9;">${b.charger_name}</div>
                 <div style="font-size: 11px; color: var(--text-muted);">${b.station_name} | ID: ${b.cpId}</div>
@@ -1796,7 +1807,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <td style="font-size: 11px; color: var(--text-muted);">${b.deleted_at || '-'}</td>
               <td><span class="dedup-badge badge-delete">${b.delete_reason || 'MANUAL'}</span></td>
               <td style="text-align: right;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="restoreSingleBackup('${b.transactionId}')" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="restoreSingleBackup('${b.transactionId}')" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); cursor: pointer;">
                   ↩️ Qaytarish
                 </button>
               </td>
@@ -1807,7 +1818,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+            <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
               Zaxira jadvalida o'chirilgan dublikatlar topilmadi.
             </td>
           </tr>
@@ -1815,13 +1826,77 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       if (tableBody) {
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #f87171;">Xatolik: ${err.message}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #f87171;">Xatolik: ${err.message}</td></tr>`;
       }
     }
   }
 
+  function toggleBackupRow(txId, isChecked) {
+    if (isChecked) {
+      selectedBackupTxIds.add(txId);
+    } else {
+      selectedBackupTxIds.delete(txId);
+    }
+    updateRestoreBulkBtn();
+  }
+
+  function toggleHeaderBackupCheckbox(headerChk) {
+    currentBackupList.forEach(b => {
+      if (headerChk.checked) {
+        selectedBackupTxIds.add(b.transactionId);
+      } else {
+        selectedBackupTxIds.delete(b.transactionId);
+      }
+    });
+    document.querySelectorAll(".chk-backup-item").forEach(c => c.checked = headerChk.checked);
+    updateRestoreBulkBtn();
+  }
+
+  function updateRestoreBulkBtn() {
+    const btn = document.getElementById("btnRestoreBulk");
+    const count = selectedBackupTxIds.size;
+    if (btn) {
+      btn.disabled = count === 0;
+      btn.innerHTML = window.i18n ? window.i18n.t("btn_restore_selected", { n: count }) : `↩️ Tanlanganlarni Qaytarish (${count} ta)`;
+    }
+  }
+
+  async function restoreBulkSelected() {
+    const count = selectedBackupTxIds.size;
+    if (count === 0) return;
+
+    const confMsg = window.i18n ? window.i18n.t("alert_restore_confirm", { n: count }) : `Tanlangan ${count} ta chekni asl TCSP_CHARGE_HIST jadvaliga qaytarishni tasdiqlaysizmi?`;
+    if (!confirm(confMsg)) return;
+
+    const btn = document.getElementById("btnRestoreBulk");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = "⏳ Qaytarilmoqda...";
+    }
+
+    try {
+      const res = await fetch("/api/dedup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_ids: Array.from(selectedBackupTxIds) })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        alert(window.i18n ? window.i18n.t("alert_restore_success", { restored: data.restored_count || count }) : `✅ ${data.restored_count || count} ta chek muvaffaqiyatli asl jadvalga qaytarildi!`);
+        selectedBackupTxIds.clear();
+        loadBackups(5);
+        if (window.fetchStatus) window.fetchStatus();
+      } else {
+        alert("Qaytarishda xatolik: " + (data.message || "Noma'lum xatolik"));
+      }
+    } catch (err) {
+      alert("Xatolik: " + err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   async function restoreSingleBackup(txId) {
-    const isKo = window.i18n && window.i18n.getLanguage() === 'ko';
     const confMsg = window.i18n ? window.i18n.t("alert_restore_confirm", { n: 1 }) : "Ushbu chekni asl TCSP_CHARGE_HIST jadvaliga qaytarishni tasdiqlaysizmi?";
     if (!confirm(confMsg)) return;
 
@@ -1834,6 +1909,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       if (data.status === "success") {
         alert(window.i18n ? window.i18n.t("alert_restore_success", { restored: data.restored_count || 1 }) : `✅ Chek muvaffaqiyatli asl jadvalga qaytarildi!`);
+        selectedBackupTxIds.delete(txId);
         loadBackups(5);
         if (window.fetchStatus) window.fetchStatus();
       } else {
@@ -1862,6 +1938,9 @@ document.addEventListener("DOMContentLoaded", () => {
   window.closeBackupModal = closeBackupModal;
   window.loadBackups = loadBackups;
   window.restoreSingleBackup = restoreSingleBackup;
+  window.toggleBackupRow = toggleBackupRow;
+  window.toggleHeaderBackupCheckbox = toggleHeaderBackupCheckbox;
+  window.restoreBulkSelected = restoreBulkSelected;
 
   window.validateSchema = validateSchema;
   window.loadPgTableColumns = loadPgTableColumns;
