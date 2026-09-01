@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PG to MariaDB Data Migration & Sync Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260828_1148">
+  <link rel="stylesheet" href="/static/style.css?v=20260901_0945">
 </head>
 <body>
 
@@ -17,6 +17,19 @@
         <p data-i18n="subtitle">PostgreSQL ➔ MariaDB 실시간 동기화 관리자</p>
       </div>
     </div>
+
+    <!-- Center Segmented View Switcher -->
+    <div class="nav-segmented">
+      <button type="button" id="navBtnSync" class="nav-segment-btn active" onclick="switchMainView('sync')">
+        <span class="nav-icon">🔄</span>
+        <span data-i18n="nav_sync">Ma'lumotlar Sinxronizatsiyasi</span>
+      </button>
+      <button type="button" id="navBtnDedup" class="nav-segment-btn" onclick="switchMainView('dedup')">
+        <span class="nav-icon">🧹</span>
+        <span data-i18n="nav_dedup">Dublikatlarni Tozalash</span>
+      </button>
+    </div>
+
     <div class="header-actions">
       <div class="lang-selector-wrapper">
         <select id="langSelector" class="lang-select" title="언어 선택 / Tilni tanlash / Select Language">
@@ -35,14 +48,16 @@
   <!-- Main Content -->
   <main class="main-container">
 
-    <!-- Live Dynamic Status Grid -->
-    <section class="status-grid">
-      <div id="cardMariaDB" class="card" title="3회 클릭 시 MariaDB 설정이 열립니다">
-        <div class="card-header">
-          <span class="card-title" data-i18n="card_mariadb_title">MariaDB 서버 상태</span>
-          <span id="mariadbBadge" class="badge badge-info" data-i18n="card_mariadb_checking">확인 중...</span>
-        </div>
-        <div id="mariadbValue" class="card-value">192.168.0.28:3306</div>
+    <!-- View 1: Data Sync Dashboard -->
+    <div id="viewSync" class="main-view active">
+      <!-- Live Dynamic Status Grid -->
+      <section class="status-grid">
+        <div id="cardMariaDB" class="card" title="3회 클릭 시 MariaDB 설정이 열립니다">
+          <div class="card-header">
+            <span class="card-title" data-i18n="card_mariadb_title">MariaDB 서버 상태</span>
+            <span id="mariadbBadge" class="badge badge-info" data-i18n="card_mariadb_checking">확인 중...</span>
+          </div>
+          <div id="mariadbValue" class="card-value">192.168.0.28:3306</div>
         <div id="mariadbSub" class="card-subtext">충전소 및 충전기 정보 로딩 중...</div>
       </div>
 
@@ -161,7 +176,131 @@
         </div>
       </div>
 
-    </section>
+      </section>
+    </div>
+    <!-- End View 1: Data Sync Dashboard -->
+
+    <!-- View 2: Deduplication Manager Dashboard -->
+    <div id="viewDedup" class="main-view" style="display: none;">
+      
+      <!-- Filter & Controls Panel -->
+      <section class="dedup-filter-panel">
+        <div style="margin-bottom: 16px;">
+          <h2 style="font-size: 18px; font-weight: 700;" data-i18n="dedup_title">MariaDB Dublikat Cheklarni Boshqarish</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" data-i18n="dedup_desc">
+            Zaryadlovchi va vaqtlari to'qnashgan soxta dublikatlarni aniqlash, 15 talik sahifalarda ko'rish va xavfsiz tozalash.
+          </p>
+        </div>
+
+        <div class="dedup-filter-row">
+          <div class="filter-group-inline">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);" data-i18n="label_scan_date">Sana:</span>
+              <input type="date" id="dedupStartDate" class="date-input" style="padding: 7px 12px; font-size: 13px; border-radius: 8px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
+              <span style="color: var(--text-muted); font-size: 12px;">~</span>
+              <input type="date" id="dedupEndDate" class="date-input" style="padding: 7px 12px; font-size: 13px; border-radius: 8px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
+            </div>
+
+            <!-- Type Filter Pills -->
+            <div class="filter-pills-container">
+              <button type="button" class="filter-pill active" data-type="all" onclick="filterDedupType('all')" data-i18n="filter_all">Hammasi</button>
+              <button type="button" class="filter-pill" data-type="exact" onclick="filterDedupType('exact')" data-i18n="filter_exact">🔴 Aynan bir xil</button>
+              <button type="button" class="filter-pill" data-type="zero_power" onclick="filterDedupType('zero_power')" data-i18n="filter_zero">🟡 0 Quvvatli</button>
+              <button type="button" class="filter-pill" data-type="overlap" onclick="filterDedupType('overlap')" data-i18n="filter_overlap">🔵 Vaqt ustma-ust</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="btnScanDedup" onclick="scanDuplicates()" class="btn btn-primary" style="padding: 8px 20px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" data-i18n="btn_scan_dedup">
+              🔍 Skanerlash
+            </button>
+            <button id="btnOpenBackupModal" onclick="openBackupModal()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;" data-i18n="btn_open_backup">
+              📦 Zaxira Arxivi
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats Grid -->
+      <section class="dedup-stats-grid">
+        <div class="dedup-stat-card stat-total">
+          <div class="dedup-stat-title" data-i18n="stat_total_dupes">Jami Dublikatlar</div>
+          <div id="statTotalDupeVal" class="dedup-stat-val">0 ta</div>
+        </div>
+        <div class="dedup-stat-card stat-exact">
+          <div class="dedup-stat-title" data-i18n="stat_exact_dupes">Aynan bir xil (Exact)</div>
+          <div id="statExactDupeVal" class="dedup-stat-val" style="color: #f87171;">0 ta</div>
+        </div>
+        <div class="dedup-stat-card stat-zero">
+          <div class="dedup-stat-title" data-i18n="stat_zero_dupes">0 Quvvatli xato</div>
+          <div id="statZeroDupeVal" class="dedup-stat-val" style="color: #fbbf24;">0 ta</div>
+        </div>
+        <div class="dedup-stat-card stat-overlap">
+          <div class="dedup-stat-title" data-i18n="stat_overlap_dupes">Vaqt ustma-ust</div>
+          <div id="statOverlapDupeVal" class="dedup-stat-val" style="color: #38bdf8;">0 ta</div>
+        </div>
+      </section>
+
+      <!-- Interactive 15-item Paginated Table -->
+      <section class="dedup-table-card">
+        <div class="dedup-table-toolbar">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button id="btnCleanSelected" onclick="executeCleanSelected()" class="btn btn-danger" style="padding: 8px 18px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" disabled data-i18n="btn_clean_selected">
+              🗑️ Tanlanganlarni Tozalash (0 ta)
+            </button>
+            <button type="button" onclick="selectAllDedup()" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" data-i18n="btn_select_all">
+              Barchasini belgilash
+            </button>
+            <button type="button" onclick="deselectAllDedup()" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" data-i18n="btn_deselect_all">
+              Belgini bekor qilish
+            </button>
+          </div>
+
+          <div id="dedupPaginationInfo" style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+            15 tadan sahifalash | Jami: 0 ta
+          </div>
+        </div>
+
+        <div class="table-responsive-wrapper">
+          <table class="dedup-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input type="checkbox" id="chkHeaderDedup" onclick="toggleHeaderCheckbox(this)" title="Sahifadagilarni belgilash">
+                </th>
+                <th data-i18n="th_charger">Stansiya / Zaryadlovchi</th>
+                <th data-i18n="th_connector" style="width: 60px; text-align: center;">Port</th>
+                <th data-i18n="th_begin">Boshlanish vaqti</th>
+                <th data-i18n="th_end">Tugash vaqti</th>
+                <th data-i18n="th_power">Quvvat</th>
+                <th data-i18n="th_price">Narx (Won)</th>
+                <th data-i18n="th_card">Karta raqami</th>
+                <th data-i18n="th_type">Turi</th>
+                <th data-i18n="th_action">Tavsiya</th>
+              </tr>
+            </thead>
+            <tbody id="dedupTableBody">
+              <tr>
+                <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                  <div style="font-size: 32px; margin-bottom: 10px;">🔍</div>
+                  <div style="font-size: 14px; font-weight: 500;" data-i18n="empty_prompt_scan">Dublikatlarni tekshirish uchun yuqoridagi sanani tanlang va '🔍 Skanerlash' tugmasini bosing.</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="dedupPagination" class="dedup-pagination" style="display: none;">
+          <div style="font-size: 12px; color: var(--text-muted);" id="dedupPageIndicator">Sahifa: 1 / 1</div>
+          <div class="page-btn-group" id="dedupPageBtnGroup">
+            <!-- Dynamic Page Buttons -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <!-- End View 2: Deduplication Manager Dashboard -->
 
   </main>
 
@@ -514,7 +653,68 @@
     </div>
   </div>
 
-  <script src="/static/i18n.js?v=20260901_0846"></script>
-  <script src="/static/app.js?v=20260901_0846"></script>
+  <!-- Backup & Restore Modal -->
+  <div id="backupModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card" style="max-width: 960px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700;" data-i18n="backup_modal_title">📦 O'chirilgan Dublikatlar Zaxira Arxivi</h2>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" data-i18n="backup_modal_sub">
+            TCSP_CHARGE_HIST_DUPLICATES_BACKUP jadvalidan oxirgi o'chirilgan cheklar (Default 5 ta) va qaytarish
+          </p>
+        </div>
+        <button type="button" onclick="closeBackupModal()" class="close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px;">
+        <!-- Filter bar in modal -->
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; background: rgba(15, 23, 42, 0.4); padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+          <input type="date" id="backupStartDate" class="date-input" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
+          <span style="color: var(--text-muted); font-size: 11px;">~</span>
+          <input type="date" id="backupEndDate" class="date-input" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
+          <input type="number" id="backupCpId" placeholder="Zaryadlovchi ID (CP ID)" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff; width: 160px;">
+          <button type="button" onclick="loadBackups(20)" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" data-i18n="btn_filter_backup">
+            🔍 Qidirish
+          </button>
+          <button type="button" onclick="loadBackups(5)" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+            Top 5
+          </button>
+        </div>
+
+        <div class="table-responsive-wrapper" style="max-height: 400px; overflow-y: auto;">
+          <table class="dedup-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_charger">Stansiya / Zaryadlovchi</th>
+                <th data-i18n="th_connector" style="width: 50px; text-align: center;">Port</th>
+                <th data-i18n="th_begin">Boshlanish vaqti</th>
+                <th data-i18n="th_power">Quvvat</th>
+                <th data-i18n="th_price">Narx</th>
+                <th data-i18n="th_deleted_at">O'chirilgan vaqti</th>
+                <th data-i18n="th_delete_reason">Sababi</th>
+                <th style="text-align: right;">Amal</th>
+              </tr>
+            </thead>
+            <tbody id="backupTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                  ⏳ Yuklanmoqda...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 14px; display: flex; justify-content: flex-end; padding: 0;">
+        <button type="button" class="btn btn-secondary" onclick="closeBackupModal()" style="padding: 8px 20px; font-size: 13px;" data-i18n="btn_close">
+          Yopish
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/i18n.js?v=20260901_0945"></script>
+  <script src="/static/app.js?v=20260901_0945"></script>
 </body>
 </html>

@@ -1386,10 +1386,482 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ==========================================================================
+  // Deduplication Manager Logic (Step 2)
+  // ==========================================================================
+  
+  let currentMainView = "sync";
+  const dedupState = {
+    groups: [],
+    flatRecords: [],
+    filteredRecords: [],
+    selectedTxIds: new Set(),
+    currentPage: 1,
+    pageSize: 15,
+    currentTypeFilter: "all"
+  };
+
+  function switchMainView(view) {
+    currentMainView = view;
+    const viewSync = document.getElementById("viewSync");
+    const viewDedup = document.getElementById("viewDedup");
+    const btnSync = document.getElementById("navBtnSync");
+    const btnDedup = document.getElementById("navBtnDedup");
+
+    if (view === "dedup") {
+      if (viewSync) viewSync.style.display = "none";
+      if (viewDedup) viewDedup.style.display = "block";
+      if (btnSync) btnSync.classList.remove("active");
+      if (btnDedup) btnDedup.classList.add("active");
+
+      // Auto set default dates if empty (e.g. current year or recent month)
+      const startDateInput = document.getElementById("dedupStartDate");
+      const endDateInput = document.getElementById("dedupEndDate");
+      if (startDateInput && !startDateInput.value) {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        startDateInput.value = `${y}-${m}-01`;
+        endDateInput.value = d.toISOString().split('T')[0];
+      }
+    } else {
+      if (viewSync) viewSync.style.display = "block";
+      if (viewDedup) viewDedup.style.display = "none";
+      if (btnSync) btnSync.classList.add("active");
+      if (btnDedup) btnDedup.classList.remove("active");
+    }
+  }
+
+  async function scanDuplicates() {
+    const btnScan = document.getElementById("btnScanDedup");
+    const startDate = document.getElementById("dedupStartDate")?.value || "";
+    const endDate = document.getElementById("dedupEndDate")?.value || "";
+
+    if (btnScan) {
+      btnScan.disabled = true;
+      btnScan.innerHTML = "⏳ Skanerlanmoqda...";
+    }
+
+    const tableBody = document.getElementById("dedupTableBody");
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <div class="spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <div style="font-size: 14px; font-weight: 500;">MariaDB bazasi skanerlanmoqda...</div>
+          </td>
+        </tr>
+      `;
+    }
+
+    try {
+      const res = await fetch("/api/dedup/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start_date: startDate || null,
+          end_date: endDate || null,
+          dedup_type: dedupState.currentTypeFilter
+        })
+      });
+      const data = await res.json();
+
+      if (data.status !== "success") {
+        alert("Skanerlash xatoligi: " + (data.message || "Noma'lum xatolik"));
+        if (btnScan) {
+          btnScan.disabled = false;
+          btnScan.innerHTML = window.i18n ? window.i18n.t("btn_scan_dedup") : "🔍 Skanerlash";
+        }
+        return;
+      }
+
+      // Update KPI stats
+      const isKo = window.i18n && window.i18n.getLanguage() === 'ko';
+      const unit = isKo ? "건" : " ta";
+      
+      const statTotal = document.getElementById("statTotalDupeVal");
+      const statExact = document.getElementById("statExactDupeVal");
+      const statZero = document.getElementById("statZeroDupeVal");
+      const statOverlap = document.getElementById("statOverlapDupeVal");
+
+      if (statTotal) statTotal.textContent = (data.total_duplicates || 0).toLocaleString() + unit;
+      if (statExact) statExact.textContent = (data.exact_count || 0).toLocaleString() + unit;
+      if (statZero) statZero.textContent = (data.zero_power_count || 0).toLocaleString() + unit;
+      if (statOverlap) statOverlap.textContent = (data.overlap_count || 0).toLocaleString() + unit;
+
+      // Flatten records with group reference
+      dedupState.groups = data.groups || [];
+      dedupState.flatRecords = [];
+      dedupState.selectedTxIds.clear();
+
+      dedupState.groups.forEach((grp, gIdx) => {
+        (grp.records || []).forEach(rec => {
+          rec._groupId = grp.group_id;
+          rec._groupType = grp.type;
+          rec._groupIndex = gIdx;
+          dedupState.flatRecords.push(rec);
+          if (rec.is_recommended_delete) {
+            dedupState.selectedTxIds.add(rec.transactionId);
+          }
+        });
+      });
+
+      dedupState.currentPage = 1;
+      applyDedupFilter();
+    } catch (err) {
+      console.error("Scan error:", err);
+      alert("Skanerlashda xatolik yuz berdi: " + err.message);
+    } finally {
+      if (btnScan) {
+        btnScan.disabled = false;
+        btnScan.innerHTML = window.i18n ? window.i18n.t("btn_scan_dedup") : "🔍 Skanerlash";
+      }
+    }
+  }
+
+  function filterDedupType(type) {
+    dedupState.currentTypeFilter = type;
+    document.querySelectorAll(".filter-pill").forEach(p => {
+      p.classList.toggle("active", p.getAttribute("data-type") === type);
+    });
+    dedupState.currentPage = 1;
+    applyDedupFilter();
+  }
+
+  function applyDedupFilter() {
+    if (dedupState.currentTypeFilter === "all") {
+      dedupState.filteredRecords = [...dedupState.flatRecords];
+    } else if (dedupState.currentTypeFilter === "exact") {
+      dedupState.filteredRecords = dedupState.flatRecords.filter(r => r.type === "EXACT");
+    } else if (dedupState.currentTypeFilter === "zero_power") {
+      dedupState.filteredRecords = dedupState.flatRecords.filter(r => r.type === "ZERO_POWER");
+    } else if (dedupState.currentTypeFilter === "overlap") {
+      dedupState.filteredRecords = dedupState.flatRecords.filter(r => r.type === "TIME_OVERLAP");
+    }
+    renderDedupTable();
+  }
+
+  function renderDedupTable() {
+    const tableBody = document.getElementById("dedupTableBody");
+    const paginationBar = document.getElementById("dedupPagination");
+    const paginationInfo = document.getElementById("dedupPaginationInfo");
+    const pageIndicator = document.getElementById("dedupPageIndicator");
+    const pageBtnGroup = document.getElementById("dedupPageBtnGroup");
+    const btnClean = document.getElementById("btnCleanSelected");
+    const isKo = window.i18n && window.i18n.getLanguage() === 'ko';
+
+    // Update Clean button state
+    const selectedCount = dedupState.selectedTxIds.size;
+    if (btnClean) {
+      btnClean.disabled = selectedCount === 0;
+      btnClean.innerHTML = window.i18n ? window.i18n.t("btn_clean_selected", { n: selectedCount.toLocaleString() }) : `🗑️ Tanlanganlarni Tozalash (${selectedCount.toLocaleString()} ta)`;
+    }
+
+    if (!dedupState.filteredRecords || dedupState.filteredRecords.length === 0) {
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+              <div style="font-size: 32px; margin-bottom: 8px;">✨</div>
+              <div style="font-size: 14px; font-weight: 600; color: #4ade80;" data-i18n="empty_no_duplicates">
+                ${window.i18n ? window.i18n.t("empty_no_duplicates") : "Ushbu sana bo'yicha dublikat ma'lumotlar topilmadi! Baza toza."}
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+      if (paginationBar) paginationBar.style.display = "none";
+      if (paginationInfo) paginationInfo.textContent = isKo ? "총 0건" : "Jami: 0 ta";
+      return;
+    }
+
+    const totalRecords = dedupState.filteredRecords.length;
+    const totalPages = Math.ceil(totalRecords / dedupState.pageSize);
+    dedupState.currentPage = Math.max(1, Math.min(dedupState.currentPage, totalPages));
+
+    const startIndex = (dedupState.currentPage - 1) * dedupState.pageSize;
+    const endIndex = Math.min(startIndex + dedupState.pageSize, totalRecords);
+    const currentSlice = dedupState.filteredRecords.slice(startIndex, endIndex);
+
+    if (paginationInfo) {
+      paginationInfo.textContent = window.i18n 
+        ? window.i18n.t("pagination_showing", { total: totalRecords.toLocaleString(), start: (startIndex + 1).toLocaleString(), end: endIndex.toLocaleString() })
+        : `Jami ${totalRecords} tadan ${startIndex + 1}-${endIndex} ko'rsatilmoqda (Har sahifada 15 tadan)`;
+    }
+
+    if (tableBody) {
+      let html = "";
+      currentSlice.forEach((r) => {
+        const isChecked = dedupState.selectedTxIds.has(r.transactionId);
+        const rowClass = r.is_recommended_keep ? "row-keep" : "row-delete";
+
+        // Badges
+        let typeBadgeHtml = "";
+        if (r.type === "EXACT") {
+          typeBadgeHtml = `<span class="dedup-badge badge-exact">${window.i18n ? window.i18n.t("badge_exact_tag") : "🔴 Aynan bir xil"}</span>`;
+        } else if (r.type === "ZERO_POWER") {
+          typeBadgeHtml = `<span class="dedup-badge badge-zero">${window.i18n ? window.i18n.t("badge_zero_tag") : "🟡 0 Quvvatli"}</span>`;
+        } else {
+          typeBadgeHtml = `<span class="dedup-badge badge-overlap">${window.i18n ? window.i18n.t("badge_overlap_tag") : "🔵 Vaqt ustma-ust"}</span>`;
+        }
+
+        const actionBadgeHtml = r.is_recommended_keep 
+          ? `<span class="dedup-badge badge-keep">${window.i18n ? window.i18n.t("badge_keep") : "✅ Asl nusxa (Qoladi)"}</span>`
+          : `<span class="dedup-badge badge-delete">${window.i18n ? window.i18n.t("badge_delete") : "🗑️ Dublikat (O'chiriladi)"}</span>`;
+
+        html += `
+          <tr class="${rowClass}">
+            <td style="text-align: center;">
+              <input type="checkbox" class="chk-dedup-item" data-tx="${r.transactionId}" ${isChecked ? "checked" : ""} onchange="toggleDedupRow('${r.transactionId}', this.checked)">
+            </td>
+            <td>
+              <div style="font-weight: 600; color: #f1f5f9;">${r.charger_name || ('CP #' + r.cpId)}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">${r.station_name || ('CS #' + r.csId)} | ID: ${r.cpId}</div>
+            </td>
+            <td style="text-align: center; font-weight: 600; color: #818cf8;">#${r.connectorId || 1}</td>
+            <td><div style="font-family: monospace; font-size: 12px;">${r.begin}</div></td>
+            <td><div style="font-family: monospace; font-size: 12px;">${r.end}</div></td>
+            <td style="font-weight: 600; color: ${r.power > 0 ? '#38bdf8' : '#94a3b8'};">${r.power.toLocaleString()} <span style="font-size: 10px;">Wh</span></td>
+            <td style="font-weight: 600; color: #4ade80;">${r.totalPrice.toLocaleString()} <span style="font-size: 10px;">₩</span></td>
+            <td style="font-size: 11px; color: var(--text-muted);">${r.cardNo || '-'}</td>
+            <td>${typeBadgeHtml}</td>
+            <td>${actionBadgeHtml}</td>
+          </tr>
+        `;
+      });
+      tableBody.innerHTML = html;
+    }
+
+    // Render Pagination Controls
+    if (paginationBar) {
+      paginationBar.style.display = totalPages > 1 ? "flex" : "none";
+      if (pageIndicator) {
+        pageIndicator.textContent = isKo ? `페이지: ${dedupState.currentPage} / ${totalPages}` : `Sahifa: ${dedupState.currentPage} / ${totalPages}`;
+      }
+
+      if (pageBtnGroup) {
+        let pBtns = "";
+        pBtns += `<button class="page-btn" onclick="changeDedupPage(${dedupState.currentPage - 1})" ${dedupState.currentPage === 1 ? 'disabled' : ''}>◀</button>`;
+
+        let startP = Math.max(1, dedupState.currentPage - 2);
+        let endP = Math.min(totalPages, startP + 4);
+        if (endP - startP < 4) startP = Math.max(1, endP - 4);
+
+        for (let p = startP; p <= endP; p++) {
+          pBtns += `<button class="page-btn ${p === dedupState.currentPage ? 'active' : ''}" onclick="changeDedupPage(${p})">${p}</button>`;
+        }
+
+        pBtns += `<button class="page-btn" onclick="changeDedupPage(${dedupState.currentPage + 1})" ${dedupState.currentPage === totalPages ? 'disabled' : ''}>▶</button>`;
+        pageBtnGroup.innerHTML = pBtns;
+      }
+    }
+  }
+
+  function changeDedupPage(page) {
+    const totalPages = Math.ceil(dedupState.filteredRecords.length / dedupState.pageSize);
+    if (page >= 1 && page <= totalPages) {
+      dedupState.currentPage = page;
+      renderDedupTable();
+    }
+  }
+
+  function toggleDedupRow(txId, isChecked) {
+    if (isChecked) {
+      dedupState.selectedTxIds.add(txId);
+    } else {
+      dedupState.selectedTxIds.delete(txId);
+    }
+    const btnClean = document.getElementById("btnCleanSelected");
+    const count = dedupState.selectedTxIds.size;
+    if (btnClean) {
+      btnClean.disabled = count === 0;
+      btnClean.innerHTML = window.i18n ? window.i18n.t("btn_clean_selected", { n: count.toLocaleString() }) : `🗑️ Tanlanganlarni Tozalash (${count.toLocaleString()} ta)`;
+    }
+  }
+
+  function toggleHeaderCheckbox(headerChk) {
+    const startIndex = (dedupState.currentPage - 1) * dedupState.pageSize;
+    const endIndex = Math.min(startIndex + dedupState.pageSize, dedupState.filteredRecords.length);
+    const currentSlice = dedupState.filteredRecords.slice(startIndex, endIndex);
+
+    currentSlice.forEach(r => {
+      if (headerChk.checked) {
+        dedupState.selectedTxIds.add(r.transactionId);
+      } else {
+        dedupState.selectedTxIds.delete(r.transactionId);
+      }
+    });
+    renderDedupTable();
+  }
+
+  function selectAllDedup() {
+    dedupState.filteredRecords.forEach(r => {
+      dedupState.selectedTxIds.add(r.transactionId);
+    });
+    renderDedupTable();
+  }
+
+  function deselectAllDedup() {
+    dedupState.selectedTxIds.clear();
+    renderDedupTable();
+  }
+
+  async function executeCleanSelected() {
+    const count = dedupState.selectedTxIds.size;
+    if (count === 0) return;
+
+    const confirmMsg = window.i18n ? window.i18n.t("alert_clean_confirm", { n: count.toLocaleString() }) : `Haqiqatan ham tanlangan ${count} ta dublikatni xavfsiz zaxiraga olib o'chirmoqchimisiz?`;
+    if (!confirm(confirmMsg)) return;
+
+    const btnClean = document.getElementById("btnCleanSelected");
+    if (btnClean) {
+      btnClean.disabled = true;
+      btnClean.innerHTML = "⏳ Tozalanmoqda...";
+    }
+
+    try {
+      const res = await fetch("/api/dedup/clean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transaction_ids: Array.from(dedupState.selectedTxIds),
+          reason: "DEDUP_MANAGER_UI"
+        })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const succMsg = window.i18n ? window.i18n.t("alert_clean_success", { backed_up: (data.backed_up_count || count).toLocaleString() }) : `✅ ${data.backed_up_count || count} ta dublikat zaxiraga olindi va bazadan muvaffaqiyatli tozalandi!`;
+        alert(succMsg);
+        
+        // Refresh scan and live DB stats
+        if (window.fetchStatus) window.fetchStatus();
+        await scanDuplicates();
+      } else {
+        alert("Tozalash xatoligi: " + (data.message || "Noma'lum xato"));
+      }
+    } catch (err) {
+      alert("Xatolik yuz berdi: " + err.message);
+    } finally {
+      if (btnClean) btnClean.disabled = false;
+    }
+  }
+
+  // Backup & Restore Modal logic
+  function openBackupModal() {
+    const modal = document.getElementById("backupModal");
+    if (modal) {
+      modal.style.display = "flex";
+      loadBackups(5);
+    }
+  }
+
+  function closeBackupModal() {
+    const modal = document.getElementById("backupModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async function loadBackups(limit = 5) {
+    const tableBody = document.getElementById("backupTableBody");
+    const startDate = document.getElementById("backupStartDate")?.value || "";
+    const endDate = document.getElementById("backupEndDate")?.value || "";
+    const cpId = document.getElementById("backupCpId")?.value || "";
+
+    if (tableBody) {
+      tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">⏳ Yuklanmoqda...</td></tr>`;
+    }
+
+    try {
+      let url = `/api/dedup/backups?limit=${limit}`;
+      if (startDate) url += `&start_date=${startDate}`;
+      if (endDate) url += `&end_date=${endDate}`;
+      if (cpId) url += `&cp_id=${cpId}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.status === "success" && data.backups && data.backups.length > 0) {
+        let html = "";
+        data.backups.forEach(b => {
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: #f1f5f9;">${b.charger_name}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">${b.station_name} | ID: ${b.cpId}</div>
+              </td>
+              <td style="text-align: center; font-weight: 600; color: #818cf8;">#${b.connectorId || 1}</td>
+              <td style="font-family: monospace; font-size: 12px;">${b.begin}</td>
+              <td style="font-weight: 600; color: #38bdf8;">${b.power} Wh</td>
+              <td style="font-weight: 600; color: #4ade80;">${b.totalPrice.toLocaleString()} ₩</td>
+              <td style="font-size: 11px; color: var(--text-muted);">${b.deleted_at || '-'}</td>
+              <td><span class="dedup-badge badge-delete">${b.delete_reason || 'MANUAL'}</span></td>
+              <td style="text-align: right;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="restoreSingleBackup('${b.transactionId}')" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                  ↩️ Qaytarish
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        tableBody.innerHTML = html;
+      } else {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+              Zaxira jadvalida o'chirilgan dublikatlar topilmadi.
+            </td>
+          </tr>
+        `;
+      }
+    } catch (err) {
+      if (tableBody) {
+        tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #f87171;">Xatolik: ${err.message}</td></tr>`;
+      }
+    }
+  }
+
+  async function restoreSingleBackup(txId) {
+    const isKo = window.i18n && window.i18n.getLanguage() === 'ko';
+    const confMsg = window.i18n ? window.i18n.t("alert_restore_confirm", { n: 1 }) : "Ushbu chekni asl TCSP_CHARGE_HIST jadvaliga qaytarishni tasdiqlaysizmi?";
+    if (!confirm(confMsg)) return;
+
+    try {
+      const res = await fetch("/api/dedup/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_ids: [txId] })
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        alert(window.i18n ? window.i18n.t("alert_restore_success", { restored: data.restored_count || 1 }) : `✅ Chek muvaffaqiyatli asl jadvalga qaytarildi!`);
+        loadBackups(5);
+        if (window.fetchStatus) window.fetchStatus();
+      } else {
+        alert("Qaytarishda xatolik: " + (data.message || "Noma'lum xatolik"));
+      }
+    } catch (err) {
+      alert("Xatolik: " + err.message);
+    }
+  }
+
   function closeSamplePreviewModal() {
     const modal = document.getElementById("samplePreviewModal");
     if (modal) modal.style.display = "none";
   }
+
+  window.switchMainView = switchMainView;
+  window.scanDuplicates = scanDuplicates;
+  window.filterDedupType = filterDedupType;
+  window.changeDedupPage = changeDedupPage;
+  window.toggleDedupRow = toggleDedupRow;
+  window.toggleHeaderCheckbox = toggleHeaderCheckbox;
+  window.selectAllDedup = selectAllDedup;
+  window.deselectAllDedup = deselectAllDedup;
+  window.executeCleanSelected = executeCleanSelected;
+  window.openBackupModal = openBackupModal;
+  window.closeBackupModal = closeBackupModal;
+  window.loadBackups = loadBackups;
+  window.restoreSingleBackup = restoreSingleBackup;
 
   window.validateSchema = validateSchema;
   window.loadPgTableColumns = loadPgTableColumns;
@@ -1402,4 +1874,5 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addCustomMappingRow = addCustomMappingRow;
   window.removeCustomMappingRow = removeCustomMappingRow;
 });
+
 
