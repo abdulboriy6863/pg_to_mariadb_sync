@@ -1595,16 +1595,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const isChecked = dedupState.selectedTxIds.has(r.transactionId);
         const rowClass = r.is_recommended_keep ? "row-keep" : "row-delete";
 
-        // Badges
-        let typeBadgeHtml = "";
-        if (r.type === "EXACT") {
-          typeBadgeHtml = `<span class="dedup-badge badge-exact">${window.i18n ? window.i18n.t("badge_exact_tag") : "🔴 Aynan bir xil"}</span>`;
-        } else if (r.type === "ZERO_POWER") {
-          typeBadgeHtml = `<span class="dedup-badge badge-zero">${window.i18n ? window.i18n.t("badge_zero_tag") : "🟡 0 Quvvatli"}</span>`;
-        } else {
-          typeBadgeHtml = `<span class="dedup-badge badge-overlap">${window.i18n ? window.i18n.t("badge_overlap_tag") : "🔵 Vaqt ustma-ust"}</span>`;
-        }
-
         const actionBadgeHtml = r.is_recommended_keep 
           ? `<span class="dedup-badge badge-keep">${window.i18n ? window.i18n.t("badge_keep") : "✅ Asl nusxa (Qoladi)"}</span>`
           : `<span class="dedup-badge badge-delete">${window.i18n ? window.i18n.t("badge_delete") : "🗑️ Dublikat (O'chiriladi)"}</span>`;
@@ -1621,11 +1611,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <td style="text-align: center; font-weight: 600; color: #818cf8;">#${r.connectorId || 1}</td>
             <td><div style="font-family: monospace; font-size: 12px;">${r.begin}</div></td>
             <td><div style="font-family: monospace; font-size: 12px;">${r.end}</div></td>
-            <td style="font-weight: 600; color: ${r.power > 0 ? '#38bdf8' : '#94a3b8'};">${r.power.toLocaleString()} <span style="font-size: 10px;">Wh</span></td>
-            <td style="font-weight: 600; color: #4ade80;">${r.totalPrice.toLocaleString()} <span style="font-size: 10px;">₩</span></td>
-            <td style="font-size: 11px; color: var(--text-muted);">${r.cardNo || '-'}</td>
-            <td>${typeBadgeHtml}</td>
-            <td>${actionBadgeHtml}</td>
+            <td style="text-align: center;">${actionBadgeHtml}</td>
           </tr>
         `;
       });
@@ -1801,11 +1787,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div style="font-size: 11px; color: var(--text-muted);">${b.station_name} | ID: ${b.cpId}</div>
               </td>
               <td style="text-align: center; font-weight: 600; color: #818cf8;">#${b.connectorId || 1}</td>
-              <td style="font-family: monospace; font-size: 12px;">${b.begin}</td>
-              <td style="font-weight: 600; color: #38bdf8;">${b.power} Wh</td>
-              <td style="font-weight: 600; color: #4ade80;">${b.totalPrice.toLocaleString()} ₩</td>
+              <td><div style="font-family: monospace; font-size: 12px;">${b.begin}</div></td>
+              <td><div style="font-family: monospace; font-size: 12px;">${b.end || '-'}</div></td>
               <td style="font-size: 11px; color: var(--text-muted);">${b.deleted_at || '-'}</td>
-              <td><span class="dedup-badge badge-delete">${b.delete_reason || 'MANUAL'}</span></td>
               <td style="text-align: right;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="restoreSingleBackup('${b.transactionId}')" style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); cursor: pointer;">
                   ↩️ Qaytarish
@@ -1818,7 +1802,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
+            <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
               Zaxira jadvalida o'chirilgan dublikatlar topilmadi.
             </td>
           </tr>
@@ -1826,7 +1810,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       if (tableBody) {
-        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #f87171;">Xatolik: ${err.message}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: #f87171;">Xatolik: ${err.message}</td></tr>`;
       }
     }
   }

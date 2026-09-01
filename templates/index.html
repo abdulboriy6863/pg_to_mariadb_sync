@@ -268,20 +268,16 @@
                 <th style="width: 40px; text-align: center;">
                   <input type="checkbox" id="chkHeaderDedup" onclick="toggleHeaderCheckbox(this)" title="Sahifadagilarni belgilash">
                 </th>
-                <th data-i18n="th_charger">Stansiya / Zaryadlovchi</th>
-                <th data-i18n="th_connector" style="width: 60px; text-align: center;">Port</th>
-                <th data-i18n="th_begin">Boshlanish vaqti</th>
-                <th data-i18n="th_end">Tugash vaqti</th>
-                <th data-i18n="th_power">Quvvat</th>
-                <th data-i18n="th_price">Narx (Won)</th>
-                <th data-i18n="th_card">Karta raqami</th>
-                <th data-i18n="th_type">Turi</th>
-                <th data-i18n="th_action">Tavsiya</th>
+                <th data-i18n="th_charger">충전기 ID (Zaryadlovchi)</th>
+                <th data-i18n="th_connector" style="width: 80px; text-align: center;">컨넥터 ID</th>
+                <th data-i18n="th_begin">begin (Boshlanish)</th>
+                <th data-i18n="th_end">end (Tugash)</th>
+                <th data-i18n="th_action" style="text-align: center; width: 140px;">Tavsiya</th>
               </tr>
             </thead>
             <tbody id="dedupTableBody">
               <tr>
-                <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
                   <div style="font-size: 32px; margin-bottom: 10px;">🔍</div>
                   <div style="font-size: 14px; font-weight: 500;" data-i18n="empty_prompt_scan">Dublikatlarni tekshirish uchun yuqoridagi sanani tanlang va '🔍 Skanerlash' tugmasini bosing.</div>
                 </td>
@@ -704,19 +700,17 @@
                 <th style="width: 40px; text-align: center;">
                   <input type="checkbox" id="chkHeaderBackup" onclick="toggleHeaderBackupCheckbox(this)" title="Hammasini belgilash">
                 </th>
-                <th data-i18n="th_charger">Stansiya / Zaryadlovchi</th>
-                <th data-i18n="th_connector" style="width: 50px; text-align: center;">Port</th>
-                <th data-i18n="th_begin">Boshlanish vaqti</th>
-                <th data-i18n="th_power">Quvvat</th>
-                <th data-i18n="th_price">Narx</th>
+                <th data-i18n="th_charger">충전기 ID (Zaryadlovchi)</th>
+                <th data-i18n="th_connector" style="width: 80px; text-align: center;">컨넥터 ID</th>
+                <th data-i18n="th_begin">begin (Boshlanish)</th>
+                <th data-i18n="th_end">end (Tugash)</th>
                 <th data-i18n="th_deleted_at">O'chirilgan vaqti</th>
-                <th data-i18n="th_delete_reason">Sababi</th>
-                <th style="text-align: right;">Amal</th>
+                <th style="text-align: right; width: 100px;">Amal</th>
               </tr>
             </thead>
             <tbody id="backupTableBody">
               <tr>
-                <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
                   ⏳ Yuklanmoqda...
                 </td>
               </tr>
