@@ -1792,7 +1792,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("backupModal");
     if (modal) {
       modal.style.display = "flex";
-      loadBackups(5);
+      loadBackups(50);
     }
   }
 
@@ -1801,7 +1801,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modal) modal.style.display = "none";
   }
 
-  async function loadBackups(limit = 5) {
+  async function loadBackups(limit = 50) {
     const tableBody = document.getElementById("backupTableBody");
     const startDate = document.getElementById("backupStartDate")?.value || "";
     const endDate = document.getElementById("backupEndDate")?.value || "";

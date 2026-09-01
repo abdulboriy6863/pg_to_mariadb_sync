@@ -669,21 +669,10 @@
             <input type="date" id="backupStartDate" class="date-input" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
             <span style="color: var(--text-muted); font-size: 11px;">~</span>
             <input type="date" id="backupEndDate" class="date-input" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff;">
-            <input type="number" id="backupCpId" placeholder="CP ID (Zaryadlovchi)" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff; width: 140px;">
-            <button type="button" onclick="loadBackups(20)" class="btn btn-secondary" style="padding: 6px 14px; font-size: 12px;" data-i18n="btn_filter_backup">
+            <input type="text" id="backupCpId" placeholder="CP ID (Zaryadlovchi)" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); color: #fff; width: 150px;">
+            <button type="button" onclick="loadBackups(50)" class="btn btn-secondary" style="padding: 6px 16px; font-size: 12px; font-weight: 600;" data-i18n="btn_filter_backup">
               🔍 Qidirish
             </button>
-            <div style="display: flex; gap: 4px;">
-              <button type="button" onclick="loadBackups(5)" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;">
-                Top 5
-              </button>
-              <button type="button" onclick="loadBackups(20)" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;">
-                Top 20
-              </button>
-              <button type="button" onclick="loadBackups(50)" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;">
-                Top 50
-              </button>
-            </div>
           </div>
 
           <div>
