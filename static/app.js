@@ -1512,10 +1512,14 @@ document.addEventListener("DOMContentLoaded", () => {
       dedupState.selectedTxIds.clear();
 
       dedupState.groups.forEach((grp, gIdx) => {
-        (grp.records || []).forEach(rec => {
+        const recs = grp.records || [];
+        recs.forEach((rec, rIdx) => {
           rec._groupId = grp.group_id;
           rec._groupType = grp.type;
           rec._groupIndex = gIdx;
+          rec._isFirstInGroup = (rIdx === 0);
+          rec._isLastInGroup = (rIdx === recs.length - 1);
+          rec._groupSize = recs.length;
           dedupState.flatRecords.push(rec);
           if (rec.is_recommended_delete) {
             dedupState.selectedTxIds.add(rec.transactionId);
@@ -1594,7 +1598,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (tableBody) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="10" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
               <div style="font-size: 32px; margin-bottom: 8px;">✨</div>
               <div style="font-size: 14px; font-weight: 600; color: #4ade80;" data-i18n="empty_no_duplicates">
                 ${window.i18n ? window.i18n.t("empty_no_duplicates") : "Ushbu sana bo'yicha dublikat ma'lumotlar topilmadi! Baza toza."}
@@ -1619,18 +1623,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (paginationInfo) {
       paginationInfo.textContent = window.i18n 
         ? window.i18n.t("pagination_showing", { total: totalRecords.toLocaleString(), start: (startIndex + 1).toLocaleString(), end: endIndex.toLocaleString() })
-        : `Jami ${totalRecords} tadan ${startIndex + 1}-${endIndex} ko'rsatilmoqda (Har sahifada 15 tadan)`;
+        : `Jami ${totalRecords} tadan ${startIndex + 1}-${endIndex} ko'rsatilmoqda (Har sahifada 10 tadan)`;
     }
 
     if (tableBody) {
       let html = "";
       currentSlice.forEach((r) => {
         const isChecked = dedupState.selectedTxIds.has(r.transactionId);
-        const rowClass = r.is_recommended_keep ? "row-keep" : "row-delete";
+        const groupParity = (r._groupIndex % 2 === 0) ? "group-even" : "group-odd";
+        const groupBorderClass = r._isLastInGroup ? "group-last" : "group-inner";
+        const rowClass = `${groupParity} ${groupBorderClass}`;
 
         const actionBadgeHtml = r.is_recommended_keep 
-          ? `<span class="dedup-badge badge-keep">${window.i18n ? window.i18n.t("badge_keep") : "✅ Asl nusxa (Qoladi)"}</span>`
-          : `<span class="dedup-badge badge-delete">${window.i18n ? window.i18n.t("badge_delete") : "🗑️ Dublikat (O'chiriladi)"}</span>`;
+          ? `<span class="dedup-badge badge-keep">${window.i18n ? window.i18n.t("badge_keep") : (isKo ? "✅ 원본 (유지)" : "✅ Asl nusxa (Qoladi)")}</span>`
+          : `<span class="dedup-badge badge-delete">${window.i18n ? window.i18n.t("badge_delete") : (isKo ? "🗑️ 중복 (삭제 권장)" : "🗑️ Dublikat (O'chiriladi)")}</span>`;
 
         html += `
           <tr class="${rowClass}">
@@ -1638,12 +1644,12 @@ document.addEventListener("DOMContentLoaded", () => {
               <input type="checkbox" class="chk-dedup-item" data-tx="${r.transactionId}" ${isChecked ? "checked" : ""} onchange="toggleDedupRow('${r.transactionId}', this.checked)">
             </td>
             <td>
-              <div style="font-weight: 600; color: #f1f5f9;">${r.charger_name || ('CP #' + r.cpId)}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${r.station_name || ('CS #' + r.csId)} | ID: ${r.cpId}</div>
+              <div style="font-weight: 600; color: #f8fafc; font-size: 13.5px;">${r.charger_name || ('CP #' + r.cpId)}</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${r.station_name || ('CS #' + r.csId)} | ID: ${r.cpId}</div>
             </td>
-            <td style="text-align: center; font-weight: 600; color: #818cf8;">#${r.connectorId || 1}</td>
-            <td><div style="font-family: monospace; font-size: 12px;">${r.begin}</div></td>
-            <td><div style="font-family: monospace; font-size: 12px;">${r.end}</div></td>
+            <td style="text-align: center;"><span style="display: inline-block; font-weight: 700; color: #818cf8; background: rgba(99, 102, 241, 0.12); padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(99, 102, 241, 0.25);">#${r.connectorId || 1}</span></td>
+            <td><span class="time-capsule time-begin">${r.begin}</span></td>
+            <td><span class="time-capsule time-end">${r.end}</span></td>
             <td style="text-align: center;">${actionBadgeHtml}</td>
           </tr>
         `;

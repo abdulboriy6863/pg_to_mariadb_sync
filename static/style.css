@@ -935,22 +935,49 @@ body {
   white-space: nowrap;
 }
 
-.dedup-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  vertical-align: middle;
+.dedup-table tr.group-even td {
+  background: rgba(15, 23, 42, 0.45);
 }
 
-.dedup-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+.dedup-table tr.group-odd td {
+  background: rgba(30, 41, 59, 0.25);
 }
 
-.dedup-table tr.row-keep td {
-  background: rgba(16, 185, 129, 0.04);
+.dedup-table tr.group-even:hover td,
+.dedup-table tr.group-odd:hover td {
+  background: rgba(99, 102, 241, 0.08);
 }
 
-.dedup-table tr.row-delete td {
-  background: rgba(239, 68, 68, 0.04);
+.dedup-table tr.group-last td {
+  border-bottom: 2px solid rgba(99, 102, 241, 0.5) !important;
+}
+
+.dedup-table tr.group-inner td {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.04);
+}
+
+/* Time Capsule Typography */
+.time-capsule {
+  display: inline-block;
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.time-capsule.time-begin {
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.time-capsule.time-end {
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  background: rgba(192, 132, 252, 0.08);
 }
 
 /* Badges */
