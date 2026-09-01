@@ -10,12 +10,14 @@
     "card_no_col": "cardNo",
     "cs_id_col": "csId",
     "cp_id_col": "cpId",
+    "connector_id_col": "connectorId",
     "transaction_id_col": "transactionId"
   },
   "pg_schema_mapping": {
     "table_name": "using_history",
     "station_name_col": "station_id",
     "charger_name_col": "charger_no",
+    "connector_col": "charger_no",
     "begin_time_col": "start_time",
     "end_time_col": "end_time",
     "power_kwh_col": "use_power",

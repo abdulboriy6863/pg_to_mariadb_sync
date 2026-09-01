@@ -94,8 +94,8 @@ class CSVImporter:
                     pass
             return datetime.now()
 
-        def _gen_tx_id(cs_id, cp_id, begin_fmt):
-            raw = f"{cs_id}_{cp_id}_{begin_fmt}"
+        def _gen_tx_id(cs_id, cp_id, conn_id, begin_fmt):
+            raw = f"{cs_id}_{cp_id}_{conn_id}_{begin_fmt}"
             # 64-bit integer range to virtually eliminate MD5 truncation collisions
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)
             return -(1000000 + (h % 899999999999))
@@ -138,12 +138,23 @@ class CSVImporter:
                 start_soc = safe_int(row.get("시작SOC(%)"))
                 finish_soc = safe_int(row.get("완료SOC(%)"))
 
-                tx_id = _gen_tx_id(cs_id, cp_id, begin_fmt)
+                import re
+                raw_conn = str(row.get("커넥터") or row.get("커넥터 ID") or row.get("connectorId") or row.get("connector_id") or "1").strip()
+                conn_id = 1
+                m = re.search(r'\d+', raw_conn)
+                if m:
+                    try:
+                        conn_id = max(1, int(m.group(0)))
+                    except (ValueError, TypeError):
+                        conn_id = 1
+
+                tx_id = _gen_tx_id(cs_id, cp_id, conn_id, begin_fmt)
 
                 target_mapping = self.db_client.get_target_mapping()
                 tx_col = target_mapping.get("transaction_id_col", "transactionId")
                 cs_col = target_mapping.get("cs_id_col", "csId")
                 cp_col = target_mapping.get("cp_id_col", "cpId")
+                conn_col = target_mapping.get("connector_id_col", "connectorId")
                 begin_col = target_mapping.get("begin_col", "begin")
                 end_col = target_mapping.get("end_col", "end")
                 power_col = target_mapping.get("power_col", "power")
@@ -155,7 +166,7 @@ class CSVImporter:
                     cs_col: cs_id,
                     cp_col: cp_id,
                     "modelId": req_defaults.get("modelId", 0),
-                    "connectorId": req_defaults.get("connectorId", 1),
+                    conn_col: conn_id,
                     begin_col: begin_fmt,
                     end_col: end_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     power_col: power_val,

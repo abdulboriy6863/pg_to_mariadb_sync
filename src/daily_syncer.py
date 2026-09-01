@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from datetime import datetime, timedelta
 from src.db_client import MariaDBClient
 from src.pg_client import PostgreSQLClient
@@ -308,9 +309,13 @@ class DailySyncer:
                     date_expr = "CURRENT_DATE"
                     rec_date_select = "CURRENT_DATE"
 
+                conn_col_name = "charger_no" if "charger_no" in available_cols else ("connector_id" if "connector_id" in available_cols else "connector")
+                conn_select = f"CAST(h.{conn_col_name} AS VARCHAR)" if conn_col_name in available_cols else "'1'"
+
                 select_clause = f"""
                     SELECT COALESCE(s.station_name, {st_select}) AS station_name,
                            COALESCE(c.charger_name, {cp_select}) AS charger_name,
+                           {conn_select} AS raw_charger_no,
                            {begin_expr} AS begin_time,
                            {end_expr} AS end_time,
                            {power_expr} AS power_val,
@@ -427,7 +432,17 @@ class DailySyncer:
             if end_str and "-" not in end_str and rec_date:
                 end_str = f"{rec_date} {end_str}".strip()
 
-            raw = f"{cs_id}_{cp_id}_{begin_str}"
+            # Parse connector / port ID safely (e.g. '01' -> 1, '02' -> 2, '2 : 100kw' -> 2, fallback 1)
+            raw_conn = str(r.get("raw_charger_no") or "1").strip()
+            conn_id = 1
+            m = re.search(r'\d+', raw_conn)
+            if m:
+                try:
+                    conn_id = max(1, int(m.group(0)))
+                except (ValueError, TypeError):
+                    conn_id = 1
+
+            raw = f"{cs_id}_{cp_id}_{conn_id}_{begin_str}"
             h = int(hashlib.md5(raw.encode('utf-8')).hexdigest()[:12], 16)
             tx_id = -(1000000 + (h % 899999999999))
 
@@ -435,6 +450,7 @@ class DailySyncer:
             tx_col = target_mapping.get("transaction_id_col", "transactionId")
             cs_col = target_mapping.get("cs_id_col", "csId")
             cp_col = target_mapping.get("cp_id_col", "cpId")
+            conn_col = target_mapping.get("connector_id_col", "connectorId")
             begin_col = target_mapping.get("begin_col", "begin")
             end_col = target_mapping.get("end_col", "end")
             power_col = target_mapping.get("power_col", "power")
@@ -450,7 +466,7 @@ class DailySyncer:
                 cs_col: cs_id,
                 cp_col: cp_id,
                 "modelId": 0,
-                "connectorId": 1,
+                conn_col: conn_id,
                 begin_col: begin_str,
                 end_col: end_str,
                 power_col: power_wh,
