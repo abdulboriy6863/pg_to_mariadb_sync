@@ -16,6 +16,7 @@ from src.pg_client import PostgreSQLClient
 from src.csv_importer import CSVImporter
 from src.daily_syncer import DailySyncer, get_sync_progress_state
 from src.lookup_service import LookupService
+from src.dedup_service import DedupService
 
 app = FastAPI(title="PostgreSQL to MariaDB Migration & Sync Dashboard")
 
@@ -805,3 +806,66 @@ def get_sync_history():
 @app.get("/api/sync-progress")
 def get_sync_progress():
     return JSONResponse(content=get_sync_progress_state())
+
+@app.post("/api/dedup/scan")
+def scan_duplicates_api(payload: dict = Body(...)):
+    try:
+        service = DedupService()
+        start_date = payload.get("start_date")
+        end_date = payload.get("end_date")
+        target_date = payload.get("target_date")
+        dedup_type = payload.get("dedup_type", "all")
+        result = service.scan_duplicates(
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            target_date=target_date if target_date else None,
+            dedup_type=dedup_type
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error in scan_duplicates_api: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+@app.post("/api/dedup/clean")
+def clean_duplicates_api(payload: dict = Body(...)):
+    try:
+        service = DedupService()
+        tx_ids = payload.get("transaction_ids", [])
+        reason = payload.get("reason", "MANUAL_SELECTION")
+        result = service.delete_and_backup_duplicates(tx_ids, delete_reason=reason)
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error in clean_duplicates_api: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+@app.get("/api/dedup/backups")
+def get_dedup_backups_api(
+    limit: int = 5,
+    start_date: str = None,
+    end_date: str = None,
+    cp_id: int = None
+):
+    try:
+        service = DedupService()
+        result = service.get_deleted_backups(
+            limit=limit,
+            start_date=start_date if start_date else None,
+            end_date=end_date if end_date else None,
+            cp_id=cp_id if cp_id else None
+        )
+        return JSONResponse(content={"status": "success", "backups": result})
+    except Exception as e:
+        logging.error(f"Error in get_dedup_backups_api: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+@app.post("/api/dedup/restore")
+def restore_duplicates_api(payload: dict = Body(...)):
+    try:
+        service = DedupService()
+        tx_ids = payload.get("transaction_ids", [])
+        result = service.restore_duplicates(tx_ids)
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error in restore_duplicates_api: {e}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
