@@ -132,18 +132,34 @@ class DedupService:
                 "groups": []
             }
 
-        # Build date condition
-        date_where = "1=1"
+        # Build date condition (optimized for index usage)
         params = []
         if start_date and end_date:
-            date_where = f"DATE({begin_col}) >= %s AND DATE({begin_col}) <= %s"
-            params = [start_date, end_date]
+            s_val = start_date if " " in start_date else f"{start_date} 00:00:00"
+            e_val = end_date if " " in end_date else f"{end_date} 23:59:59"
+            date_where_simple = f"{begin_col} >= %s AND {begin_col} <= %s"
+            date_where_alias = f"A.{begin_col} >= %s AND A.{begin_col} <= %s"
+            params = [s_val, e_val]
         elif target_date:
-            date_where = f"DATE({begin_col}) = %s"
-            params = [target_date]
+            s_val = target_date if " " in target_date else f"{target_date} 00:00:00"
+            e_val = target_date if " " in target_date else f"{target_date} 23:59:59"
+            date_where_simple = f"{begin_col} >= %s AND {begin_col} <= %s"
+            date_where_alias = f"A.{begin_col} >= %s AND A.{begin_col} <= %s"
+            params = [s_val, e_val]
         elif start_date:
-            date_where = f"DATE({begin_col}) >= %s"
-            params = [start_date]
+            s_val = start_date if " " in start_date else f"{start_date} 00:00:00"
+            date_where_simple = f"{begin_col} >= %s"
+            date_where_alias = f"A.{begin_col} >= %s"
+            params = [s_val]
+        elif end_date:
+            e_val = end_date if " " in end_date else f"{end_date} 23:59:59"
+            date_where_simple = f"{begin_col} <= %s"
+            date_where_alias = f"A.{begin_col} <= %s"
+            params = [e_val]
+        else:
+            date_where_simple = "1=1"
+            date_where_alias = "1=1"
+            params = []
 
         groups = []
         seen_tx_ids = set()
@@ -160,7 +176,7 @@ class DedupService:
                     group_sql = f"""
                     SELECT {cp_col} as cpId, {conn_col} as connectorId, {begin_col} as begin_time, COUNT(*) as cnt
                     FROM {target_table}
-                    WHERE {date_where}
+                    WHERE {date_where_simple}
                     GROUP BY {cp_col}, {conn_col}, {begin_col}
                     HAVING COUNT(*) > 1
                     ORDER BY {begin_col} DESC
@@ -240,9 +256,10 @@ class DedupService:
                         })
 
                 # -------------------------------------------------------------
-                # 2. Time Overlapping Conflicts (A.begin < B.end AND A.end > B.begin)
+                # 2. Time Overlapping Conflicts (A.begin < B.begin < A.end)
                 # -------------------------------------------------------------
                 if dedup_type in ("all", "overlap"):
+                    b_date_where = date_where_alias.replace("A.", "B.")
                     overlap_sql = f"""
                     SELECT A.{tx_col} as tx1, A.{cs_col} as cs1, A.{cp_col} as cp1, A.{conn_col} as conn1,
                            A.{begin_col} as b1, A.{end_col} as e1, A.{power_col} as p1, A.{price_col} as pr1, A.{card_col} as c1,
@@ -250,12 +267,14 @@ class DedupService:
                            B.{begin_col} as b2, B.{end_col} as e2, B.{power_col} as p2, B.{price_col} as pr2, B.{card_col} as c2
                     FROM {target_table} A
                     JOIN {target_table} B ON A.{cp_col} = B.{cp_col} AND A.{conn_col} = B.{conn_col} AND A.{tx_col} < B.{tx_col}
-                    WHERE A.{date_where}
-                      AND A.{begin_col} < B.{end_col} AND A.{end_col} > B.{begin_col}
-                      AND A.{begin_col} != B.{begin_col}
+                    WHERE {date_where_alias}
+                      AND {b_date_where}
+                      AND B.{begin_col} >= A.{begin_col} AND B.{begin_col} < A.{end_col}
+                      AND B.{begin_col} != A.{begin_col}
                     LIMIT 200;
                     """
-                    cursor.execute(overlap_sql, params)
+                    overlap_params = list(params) + list(params)
+                    cursor.execute(overlap_sql, overlap_params)
                     overlap_pairs = cursor.fetchall()
 
                     for o_idx, pair in enumerate(overlap_pairs):
