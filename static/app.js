@@ -1414,16 +1414,17 @@ document.addEventListener("DOMContentLoaded", () => {
       if (btnSync) btnSync.classList.remove("active");
       if (btnDedup) btnDedup.classList.add("active");
 
-      // Auto set default dates if empty (recent 7 days)
+      // Auto set default dates to today (dynamic timestamps)
       const startDateInput = document.getElementById("dedupStartDate");
       const endDateInput = document.getElementById("dedupEndDate");
-      if (startDateInput && !startDateInput.value) {
-        const d = new Date();
-        const todayStr = d.toISOString().split('T')[0];
-        const past = new Date();
-        past.setDate(past.getDate() - 7);
-        startDateInput.value = past.toISOString().split('T')[0];
-        endDateInput.value = todayStr;
+      if (startDateInput) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${y}-${m}-${d}`;
+        if (!startDateInput.value) startDateInput.value = todayStr;
+        if (!endDateInput.value) endDateInput.value = todayStr;
       }
     } else {
       if (viewSync) viewSync.style.display = "block";
