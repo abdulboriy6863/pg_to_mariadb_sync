@@ -28,30 +28,53 @@ class DedupService:
                     # Station ID -> Name
                     cursor.execute("SELECT id, name FROM TINF_CS;")
                     for r in cursor.fetchall():
-                        st_map[r['id']] = r.get('name', '').strip()
+                        st_map[r['id']] = (r.get('name') or '').strip()
 
-                    # Charger ID -> Name and Code (like BNS035901)
-                    cursor.execute("SELECT * FROM TINF_CP LIMIT 1;")
-                    sample = cursor.fetchone()
-                    cols = list(sample.keys()) if sample else []
-
+                    # Inspect columns in TINF_CP
+                    cursor.execute("SELECT * FROM TINF_CP LIMIT 10;")
+                    sample_rows = cursor.fetchall()
                     code_col = None
-                    for c_name in ['cid', 'code', 'cpId', 'cp_id', 'chargerId', 'charger_id', 'cpCode']:
-                        if c_name in cols:
-                            code_col = c_name
-                            break
+                    if sample_rows:
+                        all_cols = list(sample_rows[0].keys())
+                        logger.info(f"TINF_CP detected columns: {all_cols}")
 
-                    if code_col:
-                        cursor.execute(f"SELECT id, name, `{code_col}` as code_val FROM TINF_CP;")
-                    else:
-                        cursor.execute("SELECT id, name FROM TINF_CP;")
+                        # 1. Check known candidate column names
+                        for candidate in ['cid', 'charger_id', 'chargerId', 'cp_id', 'cpId', 'code', 'cpCode', 'chargerCode', 'sn', 'serialNo', 'charger_no']:
+                            if candidate in all_cols:
+                                code_col = candidate
+                                break
 
+                        # 2. Check row values for BNS or alphanumeric code
+                        if not code_col:
+                            for c in all_cols:
+                                if c in ('id', 'name', 'created_at', 'updated_at', 'createdAt', 'updatedAt'):
+                                    continue
+                                for s_row in sample_rows:
+                                    val = str(s_row.get(c) or '').strip()
+                                    if val.startswith('BNS') or (len(val) >= 5 and any(ch.isalpha() for ch in val) and any(ch.isdigit() for ch in val)):
+                                        code_col = c
+                                        logger.info(f"Found Charger Code column by value pattern: {code_col} (sample: {val})")
+                                        break
+                                if code_col:
+                                    break
+
+                    # Fetch all chargers
+                    cursor.execute("SELECT * FROM TINF_CP;")
                     for r in cursor.fetchall():
+                        cp_id_num = r['id']
                         name_val = (r.get('name') or '').strip()
-                        code_val = str(r.get('code_val') or '').strip()
-                        cp_map[r['id']] = {
+                        code_val = (str(r.get(code_col) or '').strip()) if code_col else ''
+
+                        # Check if BNS is embedded inside name
+                        if not code_val and name_val:
+                            import re
+                            m = re.search(r'(BNS\w+)', name_val)
+                            if m:
+                                code_val = m.group(1)
+
+                        cp_map[cp_id_num] = {
                             "name": name_val,
-                            "code": code_val if code_val else (f"CP #{r['id']}")
+                            "code": code_val if code_val else (f"CP #{cp_id_num}")
                         }
             except Exception as e:
                 logger.warning(f"Failed to load CS/CP names cache: {e}")

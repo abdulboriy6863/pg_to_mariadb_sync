@@ -1642,14 +1642,22 @@ document.addEventListener("DOMContentLoaded", () => {
           ? `<div class="dt-status dt-status-keep"><span class="dt-dot"></span>${statusText}</div>`
           : `<div class="dt-status dt-status-delete"><span class="dt-dot"></span>${statusText}</div>`;
 
+        const displayCode = r.charger_code || ('CP #' + r.cpId);
+        const displayName = r.charger_name || '';
+        const displayStation = r.station_name || ('CS #' + r.csId);
+        let subText = displayStation;
+        if (displayName && displayName !== displayCode) {
+          subText = `${displayName} | ${displayStation}`;
+        }
+
         html += `
           <tr class="${rowClass}">
             <td style="text-align: center;">
               <input type="checkbox" class="chk-dedup-item" data-tx="${r.transactionId}" ${isChecked ? "checked" : ""} onchange="toggleDedupRow('${r.transactionId}', this.checked)">
             </td>
             <td>
-              <div style="font-weight: 700; color: #ffffff; font-size: 13.5px; font-family: monospace; letter-spacing: 0.5px;">${r.charger_code || r.charger_name || ('CP #' + r.cpId)}</div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${r.charger_name ? r.charger_name + ' | ' : ''}${r.station_name || ('CS #' + r.csId)}</div>
+              <div style="font-weight: 700; color: #ffffff; font-size: 13.5px; font-family: monospace; letter-spacing: 0.5px;">${displayCode}</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${subText}</div>
             </td>
             <td style="text-align: center;"><span style="display: inline-block; font-weight: 700; color: #60a5fa; background: rgba(59, 130, 246, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.25);">#${r.connectorId || 1}</span></td>
             <td><span class="time-capsule time-begin">${r.begin}</span></td>
